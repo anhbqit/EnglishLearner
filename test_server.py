@@ -25,3 +25,13 @@ except ValueError: pass
 server.ask = lambda m, system=None, max_tokens=None: "fb"
 assert all(server.run_task(t, {"level": "C2"}) == "fb" for t in ("sentence", "grade", "test"))
 print("ok tasks")
+
+# chat modes
+got = {}
+server.ask = lambda m, system=None, max_tokens=None: (got.update(s=system, t=max_tokens) or "r")
+assert server.chat({"messages": [], "mode": "roleplay", "scenario": "meeting", "level": "B2"}) == "r" and "colleague" in got["s"] and "B2" in got["s"]
+server.chat({"messages": [], "mode": "email"}); assert got["t"] == 500
+for bad in ({"mode": "x"}, {"mode": "roleplay"}, {"level": "Z"}):
+    try: server.chat({"messages": [], **bad}); raise SystemExit("expected error")
+    except ValueError: pass
+print("ok chat")

@@ -48,7 +48,7 @@ def run_task(task, d):
     if lv not in LEVELS: raise ValueError("Bad level")
     g = lambda k: str(d.get(k, ""))[:2000]  # cap input size (cost + abuse)
     if task == "cards":
-        p = (f"CEFR level {lv}. Give 5 useful English words (prefer work/business/study words). "
+        p = (f"CEFR level {lv}. Topic: {g('topic') or 'work, business or study'}. Give 5 useful English words. "
              f"Do not use: {g('avoid')}. Return a JSON array of "
              '{"word":"","ipa":"/IPA/","vi":"short Vietnamese meaning","example":"one short English sentence"}.')
         return parse_json(ask([{"role": "user", "content": p}], JSON_SYS, 800), "[", "]")
@@ -60,9 +60,26 @@ def run_task(task, d):
                      "Say if the word is used correctly. Give a corrected sentence and a one-line reason. Max 3 lines.",
          "grade": f"Grammar lesson: {g('title')}\nExercises and student answers:\n{g('qa')}\n"
                   "For each: tick or cross, the correct answer, a one-line reason. End with the score, like 3/5.",
-         "test": f"Level {lv}. Student paragraph: {g('text')}\nWords/grammar they should use: {g('words')}\n"
+         "test": f"Level {lv}. Student paragraph: {g('text')}\nVocabulary to use: {g('words')}\nGrammar to use: {g('grammar')}\n"
                  "Give: score out of 10; corrected paragraph; top 3 mistakes in simple words; which target words were used well."}[task]
     return ask([{"role": "user", "content": p}], max_tokens=600)
+
+SCEN = {"interview": "an interviewer in a job interview for an office job", "meeting": "a colleague in a team meeting",
+        "customer": "an unhappy customer calling support", "supplier": "a supplier negotiating price and delivery",
+        "smalltalk": "a new coworker making small talk"}
+EMAIL = ("You are a friendly Business English email coach. Reply in English only, short and simple. If the student says "
+         "'Please start', give one short realistic work-email task (2-3 lines: who to write to and why). Otherwise the student "
+         "wrote an email: show an improved version, then 3 short tips (tone, grammar, format).")
+ROLE = ("You are {who} in a role-play with a Business English student. Stay in character. Reply in English only, in 1-3 short "
+        "simple sentences, and end with one question. If the student says 'Please start', open the scene. After your reply, "
+        "if the student's last message had mistakes, add a new line starting 'Tip:' with the corrected sentence and a one-line reason.")
+
+def chat(d):
+    lv, mode = d.get("level", "A1"), d.get("mode", "chat")
+    if lv not in LEVELS or mode not in ("chat", "email", "roleplay"): raise ValueError("Bad request")
+    if mode == "roleplay" and d.get("scenario") not in SCEN: raise ValueError("Pick a scene first.")
+    sysmsg = {"chat": SYSTEM, "email": EMAIL, "roleplay": ROLE.format(who=SCEN.get(d.get("scenario")))}[mode]
+    return ask(d["messages"], f"{sysmsg} The student's level is {lv}.", 500 if mode == "email" else None)
 
 def save_settings(d):
     c = load_cfg()
@@ -83,7 +100,7 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             d = json.loads(self.rfile.read(int(self.headers["content-length"])))
-            if self.path == "/chat": self.send(200, {"reply": ask(d["messages"])})
+            if self.path == "/chat": self.send(200, {"reply": chat(d)})
             elif self.path == "/ai": self.send(200, {"result": run_task(d["task"], d)})
             elif self.path == "/settings": save_settings(d); self.send(200, {"ok": True})
             else: self.send(404, {"error": "not found"})
