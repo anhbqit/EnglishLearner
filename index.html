@@ -1,0 +1,148 @@
+<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<title>English Learner</title>
+<style>
+body{font:16px system-ui;margin:0;background:#fdf6f9;display:flex;height:100vh}
+main{flex:1;display:flex;flex-direction:column;max-width:760px;margin:auto;height:100%;min-width:0}
+header{padding:12px 16px 4px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
+nav{padding:0 16px 8px;display:flex;gap:6px;flex-wrap:wrap}
+nav button{background:#fff;color:#444;border:1px solid #d9c7d0}nav button.on{background:#e0679a;color:#fff}
+.tab{display:none;flex:1;overflow:auto;padding:0 16px 16px;flex-direction:column}.tab.on{display:flex}
+#log{flex:1;overflow:auto}
+.m{padding:10px 14px;margin:8px 0;border-radius:14px;max-width:80%;white-space:pre-wrap}
+.u{background:#f4b6cf;margin-left:auto}.a{background:#fff;border:1px solid #eadde3}.e{background:#fde0e0;color:#900}
+form.c{display:flex;gap:8px;padding-top:12px}
+input,select,button,textarea{font:inherit;padding:9px;border:1px solid #d9c7d0;border-radius:10px}
+textarea{width:100%;box-sizing:border-box;min-height:120px}
+#t,.grow{flex:1}button{background:#e0679a;color:#fff;border:0;cursor:pointer}
+.card{background:#fff;border:1px solid #eadde3;border-radius:14px;padding:16px;margin:10px 0}
+.big{font-size:32px;font-weight:700}.fb{white-space:pre-wrap;margin-top:8px}.row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center}
+.hide{display:none}.ex{margin:8px 0}.ex input{width:100%;box-sizing:border-box}.w100{width:100%;box-sizing:border-box}
+#yt{width:100%;aspect-ratio:16/9;background:#000;border-radius:12px}
+#s{display:none;width:300px;background:#fff;padding:16px;border-left:1px solid #eadde3;overflow:auto}
+#s.open{display:block}#s label{display:block;margin-top:10px;font-size:14px}#s input,#s select{width:100%;box-sizing:border-box}
+small,a{color:#777}
+</style>
+<main><header>English Learner 🌸 <button type=button id=g>Settings</button></header>
+<nav id=nav><button data-t=chat class=on>Chat</button><button data-t=cards>Flashcards</button><button data-t=grammar>Grammar</button><button data-t=test>Test</button><button data-t=shadow>Shadowing</button></nav>
+
+<section class="tab on" id=chat>
+<div id=log><div class="m a">Hi! Write me something in English and I'll fix it and explain simply.</div></div>
+<form class=c id=f><input id=t placeholder="Type in English..." autocomplete=off autofocus><button>Send</button></form></section>
+
+<section class=tab id=cards>
+<div class=row><select class=lv id=lv1></select><select id=acc><option value=en-US>American voice<option value=en-GB>British voice</select>
+<button id=nx>New word</button><small id=st1></small></div>
+<div class="card hide" id=cd>
+ <div class=big id=w></div><div class=row><span id=ipa></span><button id=sp>🔊 Listen</button></div>
+ <input id=guess class=w100 placeholder="Guess the meaning (English or Vietnamese)" autocomplete=off>
+ <div class=row><button id=rv>Show answer</button></div>
+ <div class=hide id=ans><div><b id=vi></b></div><div id=exm></div><button id=sp2>🔊 Example</button>
+  <p>Now make your own sentence with this word:</p>
+  <input id=sen class=w100 autocomplete=off>
+  <div class=row><button id=ck>Check my sentence</button><small id=st2></small></div><div class=fb id=fb1></div></div>
+</div></section>
+
+<section class=tab id=grammar>
+<div class=row><select class=lv id=lv2></select><input id=topic class=grow placeholder="Topic (optional), e.g. present perfect"><button id=gl>New lesson</button></div><small id=st3></small>
+<div class="card hide" id=gc><b id=gt></b><div class=fb id=gx></div><div id=ge></div><button id=gk>Check answers</button><div class=fb id=gf></div></div></section>
+
+<section class=tab id=test>
+<div class=row><select class=lv id=lv3></select><small>Write a paragraph using what you learned.</small></div>
+<label><small>Words/grammar to use</small><input id=tw class=w100></label>
+<textarea id=tp placeholder="Write your paragraph here..."></textarea>
+<div class=row><button id=tk>Check my paragraph</button><small id=st4></small></div><div class=fb id=tf></div></section>
+
+<section class=tab id=shadow>
+<div class=row><input id=yurl class=grow placeholder="Paste a YouTube link"><button id=yl>Load</button></div>
+<small>Find videos by accent (opens YouTube search):
+ <a target=_blank href="https://www.youtube.com/results?search_query=english+shadowing+american+accent">American</a> ·
+ <a target=_blank href="https://www.youtube.com/results?search_query=english+shadowing+british+accent">British</a> ·
+ <a target=_blank href="https://www.youtube.com/results?search_query=english+shadowing+australian+accent">Australian</a> ·
+ <a target=_blank href="https://www.youtube.com/results?search_query=english+shadowing+canadian+accent">Canadian</a> ·
+ <a target=_blank href="https://www.youtube.com/results?search_query=english+shadowing+indian+english+accent">Indian</a> ·
+ <a target=_blank href="https://www.youtube.com/results?search_query=business+english+shadowing">Business English</a></small>
+<div class=card><div id=yt></div>
+<div class=row><select id=spd><option value=0.5>0.5x<option value=0.75>0.75x<option value=1 selected>1x</select>
+<button id=back>⏪ 5s</button><button id=ma>Set A</button><button id=mb>Set B</button>
+<label><input type=checkbox id=lp> Loop A–B</label><small id=ab>A: – B: –</small></div>
+<small>Play a short part, loop it, then say it together with the speaker. Subtitles are on if the video has them.</small></div></section>
+</main>
+
+<aside id=s><b>Settings</b>
+<label>Provider<select id=provider><option value=anthropic>Anthropic (Claude)<option value=openai>OpenAI-compatible (Gemini, Groq, OpenRouter)</select></label>
+<label>Model<input id=model></label>
+<label>API URL<input id=base_url></label>
+<label>API key <small id=ks></small><input id=api_key type=password placeholder="leave empty to keep" autocomplete=off></label>
+<label>Chat turns remembered<input id=history_turns type=number min=1></label>
+<label>Max reply tokens (chat)<input id=max_tokens type=number min=50></label>
+<p><button type=button id=sv>Save</button> <small id=st></small></p>
+<small>Limit your monthly spending in the Anthropic console. Don't type personal info.</small></aside>
+
+<script>
+const $=i=>document.getElementById(i),F=["provider","model","base_url","history_turns","max_tokens"];
+const post=(u,b)=>fetch(u,{method:"POST",body:JSON.stringify(b)}).then(r=>r.json());
+document.querySelectorAll(".lv").forEach(s=>{["A1","A2","B1","B2","C1","C2"].forEach(l=>s.add(new Option(l)));s.value=localStorage.lv||"A1";s.onchange=()=>{localStorage.lv=s.value;deck=[];document.querySelectorAll(".lv").forEach(o=>o.value=s.value)}});
+// call the AI; shows errors/progress in `out`, returns the result or undefined
+const ai=async(task,d,out)=>{out.textContent="Thinking...";const r=await post("/ai",{task,...d});out.textContent=r.error||"";return r.result};
+const words=()=>JSON.parse(localStorage.words||"[]");
+
+// tabs
+$("nav").onclick=e=>{const t=e.target.dataset.t;if(!t)return;
+ document.querySelectorAll("nav button,.tab").forEach(x=>x.classList.remove("on"));e.target.classList.add("on");$(t).classList.add("on");
+ if(t=="test"&&!$("tw").value)$("tw").value=words().slice(-8).join(", ");
+ if(t=="shadow")loadYT()};
+
+// settings
+$("g").onclick=async()=>{$("s").classList.toggle("open");const s=await(await fetch("/settings")).json();
+ F.forEach(k=>$(k).value=s[k]);$("ks").textContent=s.key_set?"(saved)":"(not set)"};
+$("sv").onclick=async()=>{const b={api_key:$("api_key").value};F.forEach(k=>b[k]=$(k).value);
+ const r=await post("/settings",b);$("api_key").value="";$("st").textContent=r.error||"Saved ✓";if(!r.error)$("ks").textContent="(saved)"};
+
+// chat
+let hist=[];
+const add=(c,t)=>{const d=document.createElement("div");d.className="m "+c;d.textContent=t;$("log").append(d);$("log").scrollTop=1e9};
+$("f").onsubmit=async e=>{e.preventDefault();const t=$("t").value.trim();if(!t)return;$("t").value="";
+ add("u",t);hist.push({role:"user",content:t});hist=hist.slice(-40);
+ const r=await post("/chat",{messages:hist});
+ if(r.error){add("e",r.error);hist.pop()}else{add("a",r.reply);hist.push({role:"assistant",content:r.reply})}};
+
+// flashcards
+let deck=[],cur;
+const say=t=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=$("acc").value;speechSynthesis.speak(u)};
+$("nx").onclick=async()=>{
+ if(!deck.length){deck=await ai("cards",{level:$("lv1").value,avoid:words().slice(-30).join(", ")},$("st1"))||[]}
+ cur=deck.shift();if(!cur)return;
+ $("w").textContent=cur.word;$("ipa").textContent=cur.ipa;$("vi").textContent=cur.vi;$("exm").textContent=cur.example;
+ ["guess","sen"].forEach(i=>$(i).value="");$("fb1").textContent="";$("ans").classList.add("hide");$("cd").classList.remove("hide");say(cur.word)};
+$("sp").onclick=()=>say(cur.word);$("sp2").onclick=()=>say(cur.example);
+$("rv").onclick=()=>{$("ans").classList.remove("hide");localStorage.words=JSON.stringify([...words().filter(w=>w!=cur.word),cur.word].slice(-50))};
+$("ck").onclick=async()=>{const s=$("sen").value.trim();if(!s)return;
+ const r=await ai("sentence",{level:$("lv1").value,word:cur.word,sentence:s},$("st2"));if(r)$("fb1").textContent=r};
+
+// grammar
+let lesson;
+$("gl").onclick=async()=>{lesson=await ai("grammar",{level:$("lv2").value,topic:$("topic").value},$("st3"));if(!lesson)return;
+ $("gt").textContent=lesson.title;$("gx").textContent=lesson.lesson;$("gf").textContent="";$("ge").replaceChildren();
+ lesson.exercises.forEach((q,i)=>{const d=document.createElement("div");d.className="ex";d.append(`${i+1}. ${q}`,document.createElement("br"),document.createElement("input"));$("ge").append(d)});
+ $("gc").classList.remove("hide")};
+$("gk").onclick=async()=>{const a=[...$("ge").querySelectorAll(".ex")].map(d=>d.firstChild.textContent+" -> "+(d.querySelector("input").value||"(blank)")).join("\n");
+ const r=await ai("grade",{level:$("lv2").value,title:lesson.title,qa:a},$("st3"));if(r)$("gf").textContent=r};
+
+// test
+$("tk").onclick=async()=>{const t=$("tp").value.trim();if(!t)return;
+ const r=await ai("test",{level:$("lv3").value,text:t,words:$("tw").value},$("st4"));if(r)$("tf").textContent=r};
+
+// shadowing (YouTube IFrame API, loaded only when this tab opens)
+let yt,A=0,B=0,pending;
+const fmt=x=>x?x.toFixed(1)+"s":"–";
+const setAB=()=>$("ab").textContent=`A: ${fmt(A)} B: ${fmt(B)}`;
+function loadYT(){if(document.getElementById("yta"))return;
+ const s=document.createElement("script");s.id="yta";s.src="https://www.youtube.com/iframe_api";document.head.append(s)}
+window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player("yt",{width:"100%",height:"100%",playerVars:{cc_load_policy:1,rel:0},events:{onReady:()=>{if(pending)yt.loadVideoById(pending)}}})};
+$("yl").onclick=()=>{const m=$("yurl").value.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);if(!m)return alert("Please paste a YouTube link.");
+ A=B=0;setAB();pending=m[1];if(yt&&yt.loadVideoById)yt.loadVideoById(pending)};
+$("spd").onchange=()=>yt.setPlaybackRate(+$("spd").value);
+$("back").onclick=()=>yt.seekTo(Math.max(0,yt.getCurrentTime()-5));
+$("ma").onclick=()=>{A=yt.getCurrentTime();setAB()};$("mb").onclick=()=>{B=yt.getCurrentTime();setAB()};
+setInterval(()=>{if($("lp").checked&&yt&&yt.getCurrentTime&&B>A&&yt.getCurrentTime()>=B)yt.seekTo(A)},200);
+</script>
