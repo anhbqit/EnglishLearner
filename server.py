@@ -85,6 +85,45 @@ def source(d):
         out += f"Base this on the following text from the book (pages {a}-{b}):\n<<<\n{' '.join(pages[a - 1:b])[:3000]}\n>>>\n"
     return out
 
+WORD_TYPES = "topic word, phrasal verb, prepositional phrase, word formation (a word made from another), word pattern (word + preposition)"
+EX_SPEC = ('"exercises":[8 items, at least 5 different types, the last one a "write" item. Types: '
+           '{"type":"choice","q":"sentence with ___","options":["a","b","c"],"answer":"b"} (2 options = circle the correct word; or True/False), '
+           '{"type":"gap","q":"sentence with ___ and the base word in (brackets), or a CAPITAL word to change","answer":["answer","other accepted answer"]}, '
+           '{"type":"order","answer":"the full correct sentence, 4-8 words"}, '
+           '{"type":"match","pairs":[["item","its match"],["item","its match"],["item","its match"]]}, '
+           '{"type":"error","q":"a sentence with one mistake","answer":["the corrected sentence"]}, '
+           '{"type":"write","q":"ask for one short sentence using something from the lesson"}]')
+
+def clean_ex(x):
+    """Validate one AI-made exercise (the AI output is untrusted); return a trimmed dict or None."""
+    try:
+        t, s = x["type"], lambda v: str(v)[:300]
+        if t == "choice":
+            o, a = [s(i) for i in x["options"]][:5], s(x["answer"])
+            return {"type": t, "q": s(x["q"]), "options": o, "answer": a} if len(o) > 1 and a in o else None
+        if t in ("gap", "error"):
+            a = [s(i) for i in (x["answer"] if isinstance(x["answer"], list) else [x["answer"]])][:4]
+            return {"type": t, "q": s(x["q"]), "answer": a} if a and all(a) else None
+        if t == "order":
+            return {"type": t, "answer": s(x["answer"])} if len(s(x["answer"]).split()) >= 3 else None
+        if t == "match":
+            p = [[s(i[0]), s(i[1])] for i in x["pairs"]][:5]
+            return {"type": t, "pairs": p} if len(p) > 1 and len({i[1] for i in p}) == len(p) else None  # pairs must be unambiguous
+        if t == "write": return {"type": t, "q": s(x["q"])}
+    except (KeyError, TypeError, IndexError, AttributeError): pass
+    return None
+
+def clean_word(w):
+    try: out = {k: str(w.get(k, ""))[:200] for k in ("word", "type", "ipa", "pos", "vi", "meaning", "example", "note")}
+    except AttributeError: return None
+    return out if out["word"].strip() and out["vi"].strip() else None
+
+def clean_lesson(r, need):
+    ex = r.get("exercises")
+    r["exercises"] = [e for e in map(clean_ex, ex if isinstance(ex, list) else []) if e]
+    if not r["exercises"] or any(not r.get(k) for k in need): raise ValueError("The AI reply was incomplete. Please try again.")
+    return r
+
 # ---- AI tasks
 def run_task(task, d):
     lv = d.get("level", "A1")
@@ -92,19 +131,20 @@ def run_task(task, d):
     g = lambda k: str(d.get(k, ""))[:2000]  # cap input size (cost + abuse)
     def js(p, n, o, c): return parse_json(ask([{"role": "user", "content": p}], JSON_SYS, n), o, c)
     if task == "vocab":
-        return js(f"CEFR level {lv}. {source(d)}Topic: {g('topic') or 'chosen from the text, or useful work/study words'}. "
-                  f"Teach 6 useful English words. Do not use: {g('avoid')}. Return JSON "
-                  '{"title":"","intro":"1-2 simple sentences about the topic","words":[{"word":"","ipa":"/IPA/","pos":"noun/verb/...",'
-                  '"vi":"short Vietnamese meaning","meaning":"simple English meaning","example":"one short sentence",'
-                  '"note":"short tip: collocation or common mistake"}],"exercises":["4 fill-in-the-blank sentences using the words, '
-                  'then 1 item asking the student to write a sentence with one given word"]}.', 1500, "{", "}")
+        r = js(f"CEFR level {lv}. {source(d)}Topic: {g('topic') or 'chosen from the text, or useful work/study words'}. "
+               f"Teach 8 useful English words, mixing these kinds: {WORD_TYPES}. Do not use: {g('avoid')}. Return JSON "
+               '{"title":"","intro":"1-2 simple sentences about the topic","words":[{"word":"","type":"one of the kinds","ipa":"/IPA/","pos":"noun/verb/phrase",'
+               '"vi":"short Vietnamese meaning","meaning":"simple English meaning","example":"one short sentence that contains the word exactly as written",'
+               '"note":"short tip: collocation or common mistake"}],' + EX_SPEC + "}.", 2200, "{", "}")
+        r["words"] = [w for w in map(clean_word, r.get("words") if isinstance(r.get("words"), list) else []) if w]
+        return clean_lesson(r, ("title", "words"))
     if task == "grammar":
-        return js(f"CEFR level {lv}. {source(d)}Topic: {g('topic') or 'chosen from the text, or common for this level'}. "
-                  "Teach ONE grammar point simply. Return JSON "
-                  '{"title":"","what":"what it is, 1-2 simple sentences","use":["2-3 short points: when to use it"],'
-                  '"structure":["1-3 patterns, like Subject + have/has + past participle"],"examples":["3 short example sentences"],'
-                  '"watch":["2 common mistakes or tips"],"business":"one example sentence from a work situation",'
-                  '"exercises":["5 short fill-in-the-blank or correct-the-sentence items"]}.', 1500, "{", "}")
+        return clean_lesson(js(f"CEFR level {lv}. {source(d)}Topic: {g('topic') or 'chosen from the text, or common for this level'}. "
+               "Teach ONE grammar point simply. Return JSON "
+               '{"title":"","what":"what it is, 1-2 simple sentences","use":["2-3 short points: when to use it"],'
+               '"structure":["1-3 patterns, like Subject + have/has + past participle"],"hints":["signal words or phrases that often go with it"],'
+               '"examples":["3 short example sentences"],"watch":["2 common mistakes or tips"],"business":"one example sentence from a work situation",'
+               + EX_SPEC + "}.", 1800, "{", "}"), ("title",))
     if task == "plan":
         return js(f"CEFR level {lv}. {source(d)}Plan today's English study for a Business English student. "
                   f"Recent topics to avoid: {g('avoid')}. Return JSON "

@@ -34,10 +34,21 @@ try:
     # AI tasks with a fake model (no network, no real text)
     seen = []
     fake = lambda reply: (lambda m, system=None, max_tokens=None: (seen.append(m[0]["content"]) or reply))
-    server.ask = fake('```json\n{"title":"t","words":[]}\n```')
-    assert server.run_task("vocab", {"level": "B1", "topic": "meetings", "book": "My Book", "from": 1, "to": 1})["title"] == "t"
+    ex = [{"type": "choice", "q": "q", "options": ["a", "b"], "answer": "b"}, {"type": "choice", "q": "q", "options": ["a", "b"], "answer": "z"},
+          {"type": "gap", "q": "q ___", "answer": "x"}, {"type": "order", "answer": "she walks to work"}, {"type": "order", "answer": "too short"},
+          {"type": "match", "pairs": [["a", "1"], ["b", "2"]]}, {"type": "match", "pairs": [["a", "1"], ["b", "1"]]},
+          {"type": "error", "q": "q", "answer": ["x", "y"]}, {"type": "write", "q": "q"}, {"type": "nope"}, "junk"]
+    word = {"word": "agenda", "ipa": "/a/", "vi": "v", "meaning": "m", "example": "e", "note": "n", "type": "topic word", "pos": "noun"}
+    server.ask = fake("```json\n" + json.dumps({"title": "t", "words": [word, {"word": "x"}, "junk"], "exercises": ex}) + "\n```")
+    r = server.run_task("vocab", {"level": "B1", "topic": "meetings", "book": "My Book", "from": 1, "to": 1})
+    assert r["title"] == "t" and len(r["words"]) == 1 and r["words"][0]["word"] == "agenda"
+    assert [e["type"] for e in r["exercises"]] == ["choice", "gap", "order", "match", "error", "write"] and r["exercises"][1]["answer"] == ["x"]
     assert "meetings" in seen[-1] and "page one" in seen[-1]
-    assert server.run_task("grammar", {"level": "A1"})["title"] == "t" and server.run_task("plan", {"level": "A1"})["title"] == "t"
+    assert len(server.run_task("grammar", {"level": "A1"})["exercises"]) == 6
+    server.ask = fake(json.dumps({"title": "t", "words": [word], "exercises": [{"type": "nope"}]}))
+    err(lambda: server.run_task("vocab", {"level": "A1"}), "incomplete")
+    server.ask = fake('{"vocab_topic":"a"}')
+    assert server.run_task("plan", {"level": "A1"})["vocab_topic"] == "a"
     server.ask = fake("not json")
     err(lambda: server.run_task("grammar", {"level": "A1"}), "not valid")
     err(lambda: server.run_task("vocab", {"level": "Z9"}), "Bad level")
