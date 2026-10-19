@@ -1,3 +1,5 @@
 .env
+.ytkey
+books/
 *.tmp*
 __pycache__
