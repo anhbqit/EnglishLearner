@@ -185,11 +185,12 @@ function setDone(k,on,s){const g=gdone();if(on)g[k]={s:s||"manual",d:dayStr()};e
 function levelUp(L){const i=LV.indexOf(L);if(!nextTopic(L)&&i<LV.length-1){setLevel(LV[i+1]);$("st3").textContent=`🎉 ${L} grammar complete! Moving to ${LV[i+1]}.`}}
 
 // tabs
+const OPEN={}; // tab -> the study page open on it: coming back to the tab shows that page again
 const go=t=>{document.querySelectorAll("nav button,.tab").forEach(x=>x.classList.remove("on"));
  document.querySelector(`[data-t=${t}]`).classList.add("on");$(t).classList.add("on");
  if(t=="test")drawTestInfo();
  if(t=="review"){if(!$("rd").value)$("rd").value=dayStr();drawReview()}
- if(t=="acct")drawAccount();if(t=="place")drawCourse();if(t=="grammar")drawPath();if(t=="cards"){drawVTopics();stats()}if(t=="today")today();markTest()};
+ if(t=="acct")drawAccount();if(t=="place")drawCourse();if(t=="grammar")drawPath();if(t=="cards"){drawVTopics();stats()}if(t=="today")today();if(OPEN[t])reopen(t);markTest()};
 $("nav").onclick=e=>e.target.dataset.t&&go(e.target.dataset.t);
 
 // the test reminder: something new was learned since the last test
@@ -201,9 +202,9 @@ const markTest=()=>document.querySelector("[data-t=test]").classList.toggle("due
 // today: missions. Vocabulary and grammar topics are the next ones on their paths; practice ideas come from your plan
 const DEF="Role-play a work situation or write a business email";
 const missions=P=>{const n=Math.min(P.due||0,10),L=P.L||curLevel();return[
- {k:"vocab",name:"Vocabulary lesson",what:P.vocab_topic?`${P.vocab_topic}: learn 8 new words`:"You finished every topic at this level. Choose a higher level.",goal:1,tab:"cards",run:()=>P.vocab_topic&&openVocab(P.vocab_topic,L,true)},
- ...(n?[{k:"cards",name:"Review cards",what:`Review ${n} saved words`,goal:n,tab:"cards",run:()=>$("rvw").click()}]:[]),
- {k:"grammar",name:"Grammar lesson",what:P.grammar_topic||"You finished every grammar topic at this level. Choose a higher level.",goal:1,tab:"grammar",run:()=>P.grammar_topic&&openGrammar(P.grammar_topic,L)},
+ {k:"vocab",name:"Vocabulary lesson",what:P.vocab_topic?`${P.vocab_topic}: learn 8 new words`:"You finished every topic at this level. Choose a higher level.",goal:1,tab:"cards",run:()=>P.vocab_topic&&(openVocab(P.vocab_topic,L,true),1)},
+ ...(n?[{k:"cards",name:"Review cards",what:`Review ${n} saved words`,goal:n,tab:"cards",run:()=>($("rvw").click(),1)}]:[]),
+ {k:"grammar",name:"Grammar lesson",what:P.grammar_topic||"You finished every grammar topic at this level. Choose a higher level.",goal:1,tab:"grammar",run:()=>P.grammar_topic&&(openGrammar(P.grammar_topic,L),1)},
  {k:"chat",name:"Speaking & writing",what:P.practice||DEF,goal:3,tab:"chat"},
  {k:"test",name:"Progress test",what:"Take a test made from what you have learned",goal:1,tab:"test"},
  {k:"shadow",name:"Listening",what:"Shadow 1 video",goal:1,tab:"shadow"}]};
@@ -216,7 +217,7 @@ function today(){shown=dayStr();const L=jget("log","{}"),t=L[shown]||{},y=L[dayS
  if(!C){const d=el("div","","card"),b=el("button","Take the level test");b.onclick=()=>go("place");d.append("⭐ Start here: a 5-minute test so I can make your personal practice plan. ",b);box.push(d)}
  else if(C.idx>=C.units.length)box.push(el("div","🎉 You finished your practice plan! Retake the level test (My Course) for a new one.","card"));
  $("tl").replaceChildren(...box,...missions(P).map(m=>{const n=t[m.k]||0,d=el("div","","card"+(n>=m.goal?" done":"")),b=el("button","Go");
-  b.onclick=()=>{go(m.tab);m.run&&m.run()};d.append(`${n>=m.goal?"✓":"○"} ${m.name} (${Math.min(n,m.goal)}/${m.goal})`,el("br"),m.what+" ",b);return d}));markTest()}
+  b.onclick=()=>{if(!(m.run&&m.run()))go(m.tab)};d.append(`${n>=m.goal?"✓":"○"} ${m.name} (${Math.min(n,m.goal)}/${m.goal})`,el("br"),m.what+" ",b);return d}));markTest()}
 function ensurePlan(){shown=dayStr();const old=plan();if(old&&old.date==shown&&old.v==2)return today(); // set first so the clock tick does not start it twice
  const C=course();
  if(C){if(old&&old.date!=shown&&old.unit==C.idx){const d=jget("log","{}")[old.date]||{};if(d.vocab&&d.grammar)C.idx++} // both lessons done yesterday: next idea
@@ -277,13 +278,18 @@ const getAns=ct=>ct._get?ct._get.map(g=>g()):[];
 const setAns=(ct,a)=>(a||[]).forEach((v,i)=>ct._set[i]&&ct._set[i](v));
 const qText=x=>x.type=="match"?"Match: "+x.pairs.map(p=>p[0]).join(", "):x.type=="order"?"Word order: "+x.answer:x.q;
 const ansText=x=>x.type=="match"?x.pairs.map(p=>p.join(" = ")).join("; "):[].concat(x.answer)[0];
-function checkEx(ct){let ok=0,tot=0;const open=[],res=[],wrong=[],right=[];
+// a wrong mark can be disputed: ask the AI to double-check, or accept your own answer (the AI answer keys are not always right)
+function fixBtn(ct,i,x,yours){const w=el("div"),a=el("button","Ask AI to double-check","sec"),b=el("button","Accept my answer","sec"),o=el("div","","fb");o.style.color="#333";
+ a.onclick=async()=>{const r=await ai("verify",{level:(ct._lv||curLevel)(),q:qText(x),key:ansText(x),yours},o);if(r)o.textContent=r};
+ b.onclick=()=>{ct._acc.set(i,JSON.stringify(ct._get[i]()));ct._fix()};w.append(a," ",b,o);return w}
+function checkEx(ct){let ok=0,tot=0;const open=[],res=[],wrong=[],right=[];ct._acc=ct._acc||new Map(); // _acc: item -> the answer you said was right
  ct._list.forEach((x,i)=>{const d=ct.children[i],v=ct._get[i]();d.querySelector(".res")?.remove();
   if(x.type=="write"){open.push({q:x.q,v});return}
-  const good=x.type=="match"?x.pairs.every((p,k)=>v[k]==p[1]):x.type=="choice"?v==x.answer:same(v,x.answer),
-   r=el("div",good?"✓ Correct":"✗ Answer: "+ansText(x),"res");
-  r.style.color=good?"#2a7":"#c33";d.append(r);tot++;ok+=good;res[i]=good;
-  (good?right:wrong).push({q:qText(x),yours:x.type=="match"?v.join(", "):v,answer:ansText(x)})});
+  const yours=x.type=="match"?x.pairs.map((p,k)=>p[0]+" = "+(v[k]||"?")).join("; "):v,mine=ct._acc.get(i)===JSON.stringify(v),
+   good=mine||(x.type=="match"?x.pairs.every((p,k)=>v[k]==p[1]):x.type=="choice"?v==x.answer:same(v,x.answer)),
+   r=el("div",good?(mine?"✓ Accepted (you said your answer was right)":"✓ Correct"):"✗ Answer: "+ansText(x),"res");
+  r.style.color=good?"#2a7":"#c33";if(!good&&ct._fix)r.append(fixBtn(ct,i,x,yours));d.append(r); // inside .res, so a re-check removes the old buttons too
+  tot++;ok+=good;res[i]=good;(good?right:wrong).push({q:qText(x),yours,answer:ansText(x)})});
  return{ok,tot,open,res,wrong,right}}
 // shows the score at once and remembers wrong answers under `key`; writing items (if any) are marked by the AI. Returns true when finished.
 async function gradeEx(ct,lv,title,out,fb,key){const{ok,tot,open,wrong,right}=checkEx(ct),s=(ct._score=[ok,tot],tot)?`Score: ${ok}/${tot}`:"";fb.textContent=s;
@@ -349,18 +355,26 @@ const sess=()=>jget("sessions","{}");
 function saveSess(k,v){const s=sess();s[k]={...v,t:Date.now()};Object.keys(s).sort((a,b)=>s[b].t-s[a].t).slice(25).forEach(x=>delete s[x]);localStorage.sessions=JSON.stringify(s)}
 const deb=(fn,ms=300)=>{let t;return()=>{clearTimeout(t);t=setTimeout(fn,ms)}};
 let S={};
-function showStudy(s){S=s;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));$("study").classList.add("on");$("study").scrollTop=0;
+function showStudy(s){if(S.k)persist();s.back=(document.querySelector("nav button.on")||{dataset:{}}).dataset.t||"today";OPEN[s.back]={kind:s.kind,L:s.L,topic:s.topic};S=s;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));$("study").classList.add("on");$("study").scrollTop=0;
  $("stitle").textContent=s.title;["gx","cd","vbtn","vlist","sxw"].forEach(i=>$(i).classList.add("hide"));$("gx").replaceChildren();$("vlist").replaceChildren();
  $("sex").replaceChildren();$("sex")._list=$("sex")._get=null;$("sst").textContent=$("sst2").textContent=$("sfb").textContent=$("ssc").textContent=""}
-function persist(){if(!S.k||!S.sess)return;const s=S.sess;s.answers=getAns($("sex"));s.fb=$("sfb").textContent;s.di=di;s.dscore=dscore;saveSess(S.k,s)}
-$("sback").onclick=()=>{persist();go(S.back||"today")};
+function persist(){if(!S.k||!S.sess)return;const s=S.sess;s.answers=getAns($("sex"));s.acc=[...($("sex")._acc||[])];s.fb=$("sfb").textContent;s.di=di;s.dscore=dscore;saveSess(S.k,s)}
+$("sback").onclick=()=>{persist();const b=S.back||"today";delete OPEN[b];go(b)};
+function reopen(t){const o=OPEN[t];if(o.kind=="grammar")openGrammar(o.topic,o.L);else if(o.kind=="vocab")openVocab(o.topic,o.L);else{delete OPEN[t];$("rvw").click()}}
 $("sex").addEventListener("input",deb(persist));$("sex").addEventListener("change",deb(persist));
 function drawMissed(){const M=S.k?missedFor(S.k).reverse():[];$("smh").textContent=`What I missed (${M.length})`;$("smc").classList.toggle("hide",!M.length);
  $("smiss").replaceChildren(...M.map(m=>{const d=el("div","","ex");d.append(el("small",m.d+" · "+m.q),el("br"),`Your answer: ${m.yours||"(blank)"}  →  correct: ${m.answer}`);return d}))}
 $("smc").onclick=()=>{localStorage.missed=JSON.stringify(jget("missed","[]").filter(m=>m.k!=S.k));drawMissed()};
-function showEx(list,answers,checked){mkEx($("sex"),list);setAns($("sex"),answers);$("sxw").classList.remove("hide");$("sfb").textContent=$("ssc").textContent="";
+function tickGrammar(){const{L,topic}=S,[ok,tot]=$("sex")._score||[0,0],p=L+"|"+topic;
+ if(tot&&ok/tot>=0.6&&SYLL[L].includes(topic)&&!gdone()[p]){setDone(p,true,`${ok}/${tot}`);$("sst2").textContent="✓ You learned this topic!";levelUp(L)}}
+function regradeStudy(){const{k,kind}=S,{ok,tot,wrong,right}=checkEx($("sex"));
+ if(k){resolveMissed(k,right.map(w=>w.q));addMissed(k,wrong);drawMissed()}
+ $("sex")._score=[ok,tot];const first=`Score: ${ok}/${tot}`,rest=$("sfb").textContent.split("\n").slice(1).join("\n");
+ $("sfb").textContent=rest?first+"\n"+rest:first;$("ssc").textContent=first;if(kind=="grammar")tickGrammar();persist()}
+function showEx(list,answers,checked){mkEx($("sex"),list);const c=$("sex");c._acc=new Map(S.sess&&S.sess.acc||[]);c._fix=regradeStudy;c._lv=()=>S.L||curLevel();
+ setAns(c,answers);$("sxw").classList.remove("hide");$("sfb").textContent=$("ssc").textContent="";
  if(S.sess)S.sess.exercises=list;
- if(checked){checkEx($("sex"));$("sfb").textContent=S.sess.fb||"";$("ssc").textContent=$("sfb").textContent.split("\n")[0]}
+ if(checked){checkEx(c);$("sfb").textContent=S.sess.fb||"";$("ssc").textContent=$("sfb").textContent.split("\n")[0]}
  drawMissed()}
 async function openGrammar(topic,L){L=L||curLevel();const k=mkKey("grammar",L,topic);showStudy({kind:"grammar",L,topic,k,back:"grammar",title:`${topic} (${L})`});
  let r=jget("lessons","{}")[k];
@@ -408,14 +422,12 @@ $("sck").onclick=async()=>{const{kind,L,topic,k}=S;if(!k||!$("sex")._list)return
  if(!await gradeEx($("sex"),L,topic,$("sst2"),$("sfb"),k))return;
  const s=S.sess=S.sess||{step:"ex",words:[]},sc=$("sfb").textContent.split("\n")[0];$("ssc").textContent=sc;s.checked=true;
  jot(kind=="grammar"?"gscore":"vscore",{title:`${kind=="grammar"?"Grammar":"Vocabulary"}: ${topic}`,s:sc||"done"});
- if(kind=="grammar"){if(!s.counted){s.counted=1;bump("grammar")}
-  const[ok,tot]=$("sex")._score||[0,0],p=L+"|"+topic;
-  if(tot&&ok/tot>=0.6&&SYLL[L].includes(topic)&&!gdone()[p]){setDone(p,true,`${ok}/${tot}`);$("sst2").textContent="✓ You learned this topic!";levelUp(L)}}
+ if(kind=="grammar"){if(!s.counted){s.counted=1;bump("grammar")}tickGrammar()}
  persist()};
 $("snew").onclick=async()=>{const{kind,L,topic,k}=S;if(!k)return;
  const r=await ai("exercises",{level:L,kind,topic,words:kind=="vocab"?topicCards(L,topic).map(c=>c.word).join(", "):"",missed:missedFor(k).slice(-5).map(m=>m.q+" -> "+m.answer).join(" | ")},$("sst2"));
  if(bad($("sst2"),r,"exercises")||S.k!=k)return;
- const s=S.sess=S.sess||{step:"ex",words:[]};s.checked=false;s.fb="";s.answers=[];showEx(r.exercises);persist();
+ const s=S.sess=S.sess||{step:"ex",words:[]};s.checked=false;s.fb="";s.answers=[];s.acc=[];showEx(r.exercises);persist();
  if(kind=="grammar"){const c=jget("lessons","{}");if(c[k]){c[k].exercises=r.exercises;localStorage.lessons=JSON.stringify(c)}}};
 
 // flashcards: write each word from its meaning. Progress is saved (next review after 1,2,4,8,16,32 days)
@@ -448,10 +460,12 @@ let ex;
 const learnedWords=()=>Object.values(cards()).sort((a,b)=>b.t-a.t).slice(0,30).map(c=>c.word);
 const learnedGrammar=()=>Object.entries(gdone()).sort((a,b)=>(b[1].d||"").localeCompare(a[1].d||"")).slice(0,8).map(([k])=>k.split("|")[1]);
 const drawTestInfo=()=>{const td=testDue();$("tinfo").textContent=`It will use your last ${learnedWords().length} words, ${learnedGrammar().length} grammar topics and your recent mistakes. New since your last test: ${td.nw} words, ${td.ng} grammar topics.`};
-function renderExam(r,answers,para,fb){ex=r;$("tt").textContent=r.title||"Your test";mkEx($("tex"),r.exercises);setAns($("tex"),answers);
- $("tpp").textContent=r.paragraph.prompt;$("tpu").textContent=r.paragraph.use.length?"Try to use: "+r.paragraph.use.join(", "):"";$("tp").value=para||"";$("tf").textContent=fb||"";$("tc").classList.remove("hide");if(fb)checkEx($("tex"))}
-const saveExam=()=>ex&&saveSess("test",{ex,answers:getAns($("tex")),para:$("tp").value,fb:$("tf").textContent});
-const restoreExam=()=>{const t=sess().test;if(t)renderExam(t.ex,t.answers,t.para,t.fb)};
+function regradeTest(){const k=mkKey("test",$("lv3").value,"Progress test"),{ok,tot,wrong,right}=checkEx($("tex"));resolveMissed(k,right.map(w=>w.q));addMissed(k,wrong);
+ const rest=$("tf").textContent.split("\n").slice(1).join("\n");$("tf").textContent=`Questions: ${ok}/${tot}`+(rest?"\n"+rest:"");saveExam()}
+function renderExam(r,answers,para,fb,acc){ex=r;$("tt").textContent=r.title||"Your test";mkEx($("tex"),r.exercises);const c=$("tex");c._acc=new Map(acc||[]);c._fix=regradeTest;c._lv=()=>$("lv3").value;setAns(c,answers);
+ $("tpp").textContent=r.paragraph.prompt;$("tpu").textContent=r.paragraph.use.length?"Try to use: "+r.paragraph.use.join(", "):"";$("tp").value=para||"";$("tf").textContent=fb||"";$("tc").classList.remove("hide");if(fb)checkEx(c)}
+const saveExam=()=>ex&&saveSess("test",{ex,answers:getAns($("tex")),para:$("tp").value,fb:$("tf").textContent,acc:[...($("tex")._acc||[])]});
+const restoreExam=()=>{const t=sess().test;if(t)renderExam(t.ex,t.answers,t.para,t.fb,t.acc)};
 $("tc").addEventListener("input",deb(saveExam));$("tc").addEventListener("change",deb(saveExam));
 $("tg").onclick=async()=>{const w=learnedWords(),g=learnedGrammar();
  if(!w.length&&!g.length){$("st4").textContent="Learn some words or a grammar topic first, then come back.";return}

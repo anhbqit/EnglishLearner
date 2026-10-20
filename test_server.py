@@ -33,7 +33,7 @@ try:
     r = server.run_task("vocab", {"level": "B1", "topic": "Meetings", "avoid": "old word"})
     assert r["title"] == "t" and len(r["words"]) == 1 and r["words"][0]["word"] == "agenda"
     assert [e["type"] for e in r["exercises"]] == ["choice", "gap", "order", "match", "error", "write"] and r["exercises"][1]["answer"] == ["x"]
-    assert "Meetings" in seen[-1] and "old word" in seen[-1] and "8 items" in seen[-1]
+    assert "Meetings" in seen[-1] and "old word" in seen[-1] and "8 items" in seen[-1] and "exactly ONE correct answer" in seen[-1]
     for cnt, want in ((5, 5), ("x", 8), (99, 12), (None, 8)):
         server.run_task("vocab", {"level": "B1", "topic": "x", "count": cnt}); assert f"Teach {want} useful" in seen[-1], cnt
     assert len(server.run_task("grammar", {"level": "A1", "topic": "Past perfect"})["exercises"]) == 6 and "Past perfect" in seen[-1]
@@ -78,7 +78,9 @@ try:
     err(lambda: server.run_task("grammar", {"level": "A1"}), "not valid")
     err(lambda: server.run_task("vocab", {"level": "Z9"}), "Bad level")
     server.ask = fake("fb")
-    assert all(server.run_task(t, {"level": "C2"}) == "fb" for t in ("sentence", "grade", "test"))
+    assert all(server.run_task(t, {"level": "C2"}) == "fb" for t in ("sentence", "grade", "test", "verify"))
+    server.run_task("verify", {"level": "B1", "q": "Match: a", "key": "a = 2", "yours": "a = 1"})
+    assert "Answer key: a = 2" in seen[-1] and "Student answered: a = 1" in seen[-1] and "RIGHT or WRONG" in seen[-1]
 
     # chat modes
     got = {}

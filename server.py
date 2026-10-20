@@ -61,7 +61,7 @@ WORD_TYPES = "topic word, phrasal verb, prepositional phrase, word formation (a 
 
 def ex_spec(n, write=True):
     """The exercise part of a JSON prompt: n typed items, at least 5 kinds."""
-    return (f'"exercises":[{n} items, at least 5 different types' + (', the last one a "write" item' if write else '') + '. Types: '
+    return (f'"exercises":[{n} items, at least 5 different types' + (', the last one a "write" item' if write else '') + '. Check every answer key twice: each item must have exactly ONE correct answer, and match items must have clearly different meanings. Types: '
             '{"type":"choice","q":"sentence with ___","options":["a","b","c"],"answer":"b"} (2 options = circle the correct word; or True/False), '
             '{"type":"gap","q":"sentence with ___ and the base word in (brackets), or a CAPITAL word to change","answer":["answer","other accepted answer"]}, '
             '{"type":"order","answer":"the full correct sentence, 4-8 words"}, '
@@ -179,6 +179,9 @@ def run_task(task, d):
          "grade": f"Lesson: {g('title')}\nExercises and student answers:\n{g('qa')}\n"
                   "For each: tick or cross, the correct answer, a one-line reason (for a writing item, give a corrected version). "
                   "End with the score, like 3/5.",
+         "verify": f"Level {lv}. Exercise: {g('q')}\nAnswer key: {g('key')}\nStudent answered: {g('yours')}\n"
+                   "The answer key was made by an AI and may be wrong. Decide if the student's answer is correct English for this exercise. "
+                   "Start your reply with RIGHT or WRONG, then one short simple reason (max 2 lines).",
          "test": f"Level {lv}. Student paragraph: {g('text')}\nVocabulary to use: {g('words')}\nGrammar studied: {g('grammar')}\n"
                  "Give: score out of 10; corrected paragraph; top 3 mistakes in simple words; which target words were used well."}[task]
     return ask([{"role": "user", "content": p}], max_tokens=600)
