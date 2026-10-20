@@ -48,7 +48,7 @@ def ask(messages, system=SYSTEM, max_tokens=None):
         body["messages"] = [{"role": "system", "content": system}] + messages
         hdr["authorization"] = "Bearer " + key
     try:
-        r = json.load(urllib.request.urlopen(urllib.request.Request(c["base_url"], json.dumps(body).encode(), hdr), timeout=60))
+        r = json.load(urllib.request.urlopen(urllib.request.Request(c["base_url"], json.dumps(body).encode(), hdr), timeout=120))
     except urllib.error.HTTPError as e:
         raise ValueError(f"API error {e.code}: {e.read().decode()[:200]}")
     return r["content"][0]["text"] if anth else r["choices"][0]["message"]["content"]
@@ -57,7 +57,10 @@ def parse_json(t, o, c):
     try: return json.loads(t[t.index(o):t.rindex(c) + 1])
     except ValueError: raise ValueError("The AI reply was not valid. Please try again.")
 
-WORD_TYPES = "topic word, phrasal verb, prepositional phrase, word formation (a word made from another), word pattern (word + preposition)"
+GROUPS = ("topic word", "phrasal verb", "prepositional phrase", "word formation", "word pattern")
+GROUP_HELP = ("topic words (useful nouns, verbs, adjectives for the topic); phrasal verbs; prepositional phrases (like 'in charge of'); "
+              "word formation (a derived word, such as a noun made from a verb; say the base word in the meaning); "
+              "word patterns (a word + the preposition or form that follows it, like 'depend on')")
 
 def ex_spec(n, write=True):
     """The exercise part of a JSON prompt: n typed items, at least 5 kinds."""
@@ -91,6 +94,9 @@ def clean_ex(x):
 def clean_word(w):
     try: out = {k: str(w.get(k, ""))[:200] for k in ("word", "type", "ipa", "pos", "vi", "meaning", "example", "note")}
     except AttributeError: return None
+    t = out["type"].lower()  # the AI may write "phrasal verbs" or something odd: map it to one of the five groups
+    out["type"] = next((g for g in GROUPS if g in t or g.rstrip("s") in t), None) or next(
+        (g for g, key in zip(GROUPS, ("topic", "phrasal", "prepos", "formation", "pattern")) if key in t), "topic word")
     return out if out["word"].strip() and out["vi"].strip() else None
 
 SKILLS = ("grammar", "vocab")
@@ -133,13 +139,14 @@ def run_task(task, d):
     g = lambda k: str(d.get(k, ""))[:2000]  # cap input size (cost + abuse)
     def js(p, n, o, c): return parse_json(ask([{"role": "user", "content": p}], JSON_SYS, n), o, c)
     if task == "vocab":
-        try: n = max(3, min(12, int(d.get("count") or 8)))  # words in this lesson
-        except (TypeError, ValueError): n = 8
+        try: per = max(2, min(8, int(d.get("per") or 6)))  # words in each of the 5 groups
+        except (TypeError, ValueError): per = 6
         r = js(f"CEFR level {lv}. Topic: {g('topic') or 'useful work and study words'}. "
-               f"Teach {n} useful English words for this topic, mixing these kinds: {WORD_TYPES}. Do not use: {g('avoid')}. Return JSON "
-               '{"title":"","words":[{"word":"","type":"one of the kinds","ipa":"/IPA/","pos":"noun/verb/phrase",'
+               f"Teach {5 * per} useful English words for this topic in 5 groups of exactly {per} words each, in this order: {GROUP_HELP}. "
+               f"Do not use: {g('avoid')}. Return JSON "
+               '{"title":"","words":[{"word":"","type":"exactly one of: topic word, phrasal verb, prepositional phrase, word formation, word pattern","ipa":"/IPA/","pos":"noun/verb/phrase",'
                '"vi":"short Vietnamese meaning","meaning":"simple English meaning","example":"one short sentence that contains the word exactly as written",'
-               '"note":"short tip: collocation or common mistake"}],' + ex_spec(8) + "}.", 2200, "{", "}")
+               '"note":"short tip: collocation or common mistake"}],' + ex_spec(10) + "}.", 4000, "{", "}")
         r["words"] = [w for w in map(clean_word, r.get("words") if isinstance(r.get("words"), list) else []) if w]
         return clean_lesson(r, ("title", "words"))
     if task == "grammar":

@@ -33,9 +33,13 @@ try:
     r = server.run_task("vocab", {"level": "B1", "topic": "Meetings", "avoid": "old word"})
     assert r["title"] == "t" and len(r["words"]) == 1 and r["words"][0]["word"] == "agenda"
     assert [e["type"] for e in r["exercises"]] == ["choice", "gap", "order", "match", "error", "write"] and r["exercises"][1]["answer"] == ["x"]
-    assert "Meetings" in seen[-1] and "old word" in seen[-1] and "8 items" in seen[-1] and "exactly ONE correct answer" in seen[-1]
-    for cnt, want in ((5, 5), ("x", 8), (99, 12), (None, 8)):
-        server.run_task("vocab", {"level": "B1", "topic": "x", "count": cnt}); assert f"Teach {want} useful" in seen[-1], cnt
+    assert "Meetings" in seen[-1] and "old word" in seen[-1] and "10 items" in seen[-1] and "exactly ONE correct answer" in seen[-1]
+    for per, want in ((5, 5), ("x", 6), (99, 8), (None, 6), (1, 2)):
+        server.run_task("vocab", {"level": "B1", "topic": "x", "per": per}); assert f"{5 * want} useful English words" in seen[-1] and f"exactly {want} words each" in seen[-1], per
+    kinds = ["Phrasal verbs", "prepositional phrases", "Word formation", "word patterns", "weird", ""]
+    server.ask = fake(json.dumps({"title": "t", "words": [{**word, "type": k} for k in kinds], "exercises": ex}))
+    assert [w["type"] for w in server.run_task("vocab", {"level": "B1"})["words"]] == [
+        "phrasal verb", "prepositional phrase", "word formation", "word pattern", "topic word", "topic word"]
     assert len(server.run_task("grammar", {"level": "A1", "topic": "Past perfect"})["exercises"]) == 6 and "Past perfect" in seen[-1]
     server.ask = fake(json.dumps({"title": "t", "words": [word], "exercises": [{"type": "nope"}]}))
     err(lambda: server.run_task("vocab", {"level": "A1"}), "incomplete")
