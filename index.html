@@ -17,7 +17,7 @@ textarea{width:100%;box-sizing:border-box;min-height:120px}#t{min-height:0;flex:
 .card{background:#fff;border:1px solid #eadde3;border-radius:14px;padding:16px;margin:10px 0}
 .big{font-size:28px;font-weight:700}.fb{white-space:pre-wrap;margin-top:8px}.row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center}
 .hide{display:none}.ex{margin:8px 0}.ex input,.ex select{width:100%;box-sizing:border-box}.w100{width:100%;box-sizing:border-box}
-.row img{border-radius:8px}.num{width:80px}
+.row img{border-radius:8px}.num{width:80px}#rv p{white-space:pre-wrap}
 #clock{font-size:20px;font-weight:700;margin:8px 0}.done{opacity:.55;text-decoration:line-through}
 #yt{width:100%;aspect-ratio:16/9;background:#000;border-radius:12px}
 #mpw{position:fixed;left:-9999px;top:0;width:200px;height:200px}#mpw.show{left:auto;right:12px;bottom:64px;z-index:9}
@@ -28,7 +28,7 @@ textarea{width:100%;box-sizing:border-box;min-height:120px}#t{min-height:0;flex:
 small,a{color:#777}
 </style>
 <main><header>English Learner 🌸 <button type=button id=g>Settings</button></header>
-<nav id=nav><button data-t=today class=on>Today</button><button data-t=place>My Course</button><button data-t=chat>Chat</button><button data-t=cards>Vocabulary</button><button data-t=grammar>Grammar</button><button data-t=test>Test</button><button data-t=shadow>Shadowing</button><button data-t=music>YouTube</button><button data-t=book>Book</button></nav>
+<nav id=nav><button data-t=today class=on>Today</button><button data-t=review>Review</button><button data-t=place>My Course</button><button data-t=chat>Chat</button><button data-t=cards>Vocabulary</button><button data-t=grammar>Grammar</button><button data-t=test>Test</button><button data-t=shadow>Shadowing</button><button data-t=music>YouTube</button><button data-t=book>Book</button></nav>
 
 <section class="tab on" id=today>
 <div id=clock></div><div id=greet></div><small id=pinfo></small><small id=yday></small>
@@ -41,6 +41,11 @@ small,a{color:#777}
 <b>Part 2: Writing (optional)</b><br><small>Write 3-4 sentences about your goals for learning English. Please don't write your name or other personal info.</small>
 <textarea id=pw></textarea><div class=row><button id=pk>Finish and make my course</button></div></div>
 <div class="card hide" id=pr></div></section>
+
+<section class=tab id=review>
+<div class=row><b>Day review</b><input type=date id=rd></div>
+<small>Everything you did on this day. It is saved in this browser for 30 days.</small>
+<div id=rv></div></section>
 
 <section class=tab id=chat>
 <div class=row><select id=mode><option value=chat>Free chat<option value=email>Business email<option value=roleplay>Role-play</select>
@@ -134,6 +139,7 @@ const cards=()=>jget("cards","{}"),dueCards=()=>Object.values(cards()).filter(c=
 const words=()=>Object.values(cards()).sort((a,b)=>a.t-b.t).map(c=>c.word);
 const bump=k=>{const L=jget("log","{}"),d=dayStr();L[d]=L[d]||{};L[d][k]=(L[d][k]||0)+1;
  Object.keys(L).sort().slice(0,-14).forEach(x=>delete L[x]);localStorage.log=JSON.stringify(L)};
+const jot=(k,v)=>{const J=jget("journal","{}"),d=dayStr();(J[d]=J[d]||[]).push({k,...v});Object.keys(J).sort().slice(0,-30).forEach(x=>delete J[x]);localStorage.journal=JSON.stringify(J)};
 const stats=()=>$("cst").textContent=`Saved: ${Object.keys(cards()).length} · Due today: ${dueCards().length}`;
 
 // book + plan helpers
@@ -152,7 +158,7 @@ const go=t=>{document.querySelectorAll("nav button,.tab").forEach(x=>x.classList
  document.querySelector(`[data-t=${t}]`).classList.add("on");$(t).classList.add("on");
  if(t=="test"){if(!$("tw").value)$("tw").value=words().slice(-8).join(", ");if(!$("tg").value)$("tg").value=localStorage.gtitle||"";
   $("tp").placeholder=(plan()||{}).writing||"Write your paragraph here..."}
- if(t=="place")drawCourse();if(t=="cards"||t=="grammar")srcLine();if(t=="cards")stats();if(t=="today")today()};
+ if(t=="review"){if(!$("rd").value)$("rd").value=dayStr();drawReview()}if(t=="place")drawCourse();if(t=="cards"||t=="grammar")srcLine();if(t=="cards")stats();if(t=="today")today()};
 $("nav").onclick=e=>e.target.dataset.t&&go(e.target.dataset.t);
 
 // today: missions built from the daily plan (topics come from the AI, pages from the book)
@@ -186,6 +192,19 @@ $("retry").onclick=ensurePlan;
 const tick=()=>{$("clock").textContent=new Date().toLocaleString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});
  if(shown!=dayStr())ensurePlan()};
 setInterval(tick,1000);tick();today();
+
+// day review: reads the journal (what you learned) and the log (counts) for one day. No AI call, no cost
+function drawReview(){const d=$("rd").value||dayStr(),J=jget("journal","{}")[d]||[],L=jget("log","{}")[d]||{},of=k=>J.filter(e=>e.k==k),last={};
+ of("wcheck").forEach(e=>last[e.w]=e.ok);const ws=ok=>Object.keys(last).filter(w=>last[w]==ok).join(", ");
+ const names={vocab:"Vocabulary lessons",cards:"Words written",grammar:"Grammar lessons",chat:"Chat messages",test:"Writing tests",shadow:"Shadowing videos"},C=course();
+ const due=Object.values(cards()).filter(c=>c.due<=dayStr(1)).length,u=C&&C.units[Math.min(C.idx+(L.vocab&&L.grammar?1:0),C.units.length-1)];
+ secs($("rv"),[["Done",Object.entries(names).filter(([k])=>L[k]).map(([k,n])=>`${n}: ${L[k]}`)],
+  ["New vocabulary",of("vlesson").map(e=>`${e.title}: ${e.words.join(", ")}`)],["Words you wrote correctly ✓",ws(true)],["Words to practice again ✗",ws(false)],
+  ["Grammar",of("glesson").map(e=>e.title)],["Exercise scores",of("vscore").concat(of("gscore")).map(e=>`${e.title}: ${e.s}`)],
+  ["Writing test feedback",of("test").map(e=>e.fb).join("\n\n")],
+  ...(d==dayStr()?[["Tomorrow",[`Words due for review: ${due}`,...(u?[`Next course unit: ${u.grammar} + ${u.vocab}`]:[])]]]:[])]);
+ if(!J.length&&!Object.keys(L).length)$("rv").prepend(el("p","Nothing was recorded for this day."))}
+$("rd").onchange=drawReview;
 
 // level test -> personal course. The level is worked out here from the score; the AI only writes the course around it
 function drawCourse(){const C=course();$("pr").classList.toggle("hide",!C);$("pt").textContent=C?"Retake the test":"Start the test";if(!C)return;
@@ -290,7 +309,7 @@ function face(){const c=dk[di],cf=$("cf"),cn=$("cn"),last=di==dk.length-1;cf.rep
  btn.onclick=()=>{if(done)return last?finish():(di++,face());
   const v=inp.value.trim();if(!v)return;done=true;const w=norm(c.word),good=[w,w.replace(/^to /,"")].includes(norm(v));
   dscore+=good;res.textContent=(good?"✓ Correct! ":"✗ The answer is: ")+c.word+" "+(c.ipa||"");res.style.color=good?"#2a7":"#c33";
-  say(c.word);srs(c.word,good);bump("cards");btn.textContent=last?"Finish":"Next ▶";
+  say(c.word);srs(c.word,good);bump("cards");jot("wcheck",{w:c.word,ok:!!good});btn.textContent=last?"Finish":"Next ▶";
   const s=el("input"),sb=el("button","Check my sentence","sec"),so=el("small"),sf=el("div","","fb"),r3=el("div","","row");s.className="w100";s.placeholder="Optional: write your own sentence with this word";
   sb.onclick=async()=>{if(!s.value.trim())return;const r=await ai("sentence",{level:$("lv1").value,word:c.word,sentence:s.value},so);if(r)sf.textContent=r};
   r3.append(sb,so);cf.append(el("p","Now make your own sentence with this word:"),s,r3,sf)}}
@@ -298,23 +317,23 @@ $("nx").onclick=async()=>{const r=await ai("vocab",{level:$("lv1").value,topic:$
  if(bad($("st1"),r,"words","exercises"))return;vl=r;
  $("vt").textContent=r.title;$("vin").textContent=r.intro||"";$("vf").textContent="";$("vc").classList.add("hide");
  const c=cards(),lv=$("lv1").value;r.words.forEach(w=>c[w.word]=c[w.word]||{...w,level:lv,box:0,due:dayStr(1),t:Date.now()});
- localStorage.cards=JSON.stringify(c);stats();mkEx($("ve"),r.exercises);deck(r.words,"learn","lesson")};
+ localStorage.cards=JSON.stringify(c);jot("vlesson",{title:r.title,words:r.words.map(w=>w.word)});stats();mkEx($("ve"),r.exercises);deck(r.words,"learn","lesson")};
 $("rvw").onclick=()=>{const l=dueCards().slice(0,10);if(!l.length){$("st1").textContent="Nothing due. Try a new lesson!";return}
  $("st1").textContent="";$("vt").textContent="Review";$("vin").textContent="";$("vc").classList.add("hide");deck(l,"write","review")};
-$("vk").onclick=()=>gradeEx($("ve"),$("lv1").value,vl.title,$("st1"),$("vf"));
+$("vk").onclick=async()=>{if(await gradeEx($("ve"),$("lv1").value,vl.title,$("st1"),$("vf")))jot("vscore",{title:"Vocabulary: "+vl.title,s:$("vf").textContent.split("\n")[0]||"done"})};
 
 // grammar lesson: what it is, how to use it, structure, examples, watch out, at work, then practice
 const secs=(ct,pairs)=>ct.replaceChildren(...pairs.flatMap(([h,v])=>!v||!v.length?[]:[el("b",h),Array.isArray(v)?(u=>(v.forEach(x=>u.append(el("li",x))),u))(el("ul")):el("p",v)]));
 let lesson;
 $("gl").onclick=async()=>{const r=await ai("grammar",{level:$("lv2").value,topic:$("topic").value,...srcArgs()},$("st3"));if(bad($("st3"),r,"exercises"))return;lesson=r;
- localStorage.gtitle=r.title;$("gt").textContent=r.title;$("gf").textContent="";
+ localStorage.gtitle=r.title;jot("glesson",{title:r.title});$("gt").textContent=r.title;$("gf").textContent="";
  secs($("gx"),[["What is it?",r.what],["How to use it",r.use],["Structure",r.structure],["Helpful hints",r.hints],["Examples",r.examples],["Watch out!",r.watch],["At work",r.business]]);
  mkEx($("ge"),r.exercises);$("gc").classList.remove("hide")};
-$("gk").onclick=async()=>{if(await gradeEx($("ge"),$("lv2").value,lesson.title,$("st3"),$("gf"))&&!lesson.done){lesson.done=1;bump("grammar")}};
+$("gk").onclick=async()=>{if(await gradeEx($("ge"),$("lv2").value,lesson.title,$("st3"),$("gf"))){jot("gscore",{title:"Grammar: "+lesson.title,s:$("gf").textContent.split("\n")[0]||"done"});if(!lesson.done){lesson.done=1;bump("grammar")}}};
 
 // test
 $("tk").onclick=async()=>{const t=$("tp").value.trim();if(!t)return;
- const r=await ai("test",{level:$("lv3").value,text:t,words:$("tw").value,grammar:$("tg").value},$("st4"));if(r){$("tf").textContent=r;bump("test")}};
+ const r=await ai("test",{level:$("lv3").value,text:t,words:$("tw").value,grammar:$("tg").value},$("st4"));if(r){$("tf").textContent=r;bump("test");jot("test",{fb:r.slice(0,1500)})}};
 
 // YouTube IFrame API: one script, loaded when first needed; callbacks queue until it is ready
 const ytq=[];let ytOK=false;
