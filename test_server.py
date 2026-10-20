@@ -49,6 +49,19 @@ try:
     err(lambda: server.run_task("vocab", {"level": "A1"}), "incomplete")
     server.ask = fake('{"vocab_topic":"a"}')
     assert server.run_task("plan", {"level": "A1"})["vocab_topic"] == "a"
+    pit = lambda lv, sk="grammar": {"level": lv, "skill": sk, "type": "choice", "q": "q ___", "options": ["a", "b"], "answer": "a"}
+    items = [pit(l) for l in ("B1", "A1", "A2", "A1")] + [pit("C2", "vocab"), pit("B2"), {**pit("A1"), "skill": "x"},
+             {**pit("A1"), "type": "write"}, pit("Z9"), "junk"]
+    server.ask = fake(json.dumps({"items": items}))
+    assert [e["level"] for e in server.run_task("placement", {})["items"]] == ["A1", "A1", "A2", "B1", "B2", "C2"]
+    server.ask = fake(json.dumps({"items": items[:3]}))
+    err(lambda: server.run_task("placement", {}), "incomplete")
+    unit = {"grammar": "past simple", "vocab": "meetings", "practice": "p", "writing": "w"}
+    server.ask = fake(json.dumps({"summary": "s", "strengths": ["a"], "weak": ["b", "c"], "units": [unit] * 3 + [{"grammar": "", "vocab": "x"}, "junk"]}))
+    c = server.run_task("course", {"level": "B1", "scores": "A1: 2/2", "book": "Destination B1"})
+    assert len(c["units"]) == 3 and c["weak"] == ["b", "c"] and "B1" in seen[-1] and "A1: 2/2" in seen[-1]
+    server.ask = fake(json.dumps({"summary": "s", "units": [unit]}))
+    err(lambda: server.run_task("course", {"level": "A1"}), "incomplete")
     server.ask = fake("not json")
     err(lambda: server.run_task("grammar", {"level": "A1"}), "not valid")
     err(lambda: server.run_task("vocab", {"level": "Z9"}), "Bad level")

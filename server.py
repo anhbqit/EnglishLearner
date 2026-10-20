@@ -124,6 +124,29 @@ def clean_lesson(r, need):
     if not r["exercises"] or any(not r.get(k) for k in need): raise ValueError("The AI reply was incomplete. Please try again.")
     return r
 
+SKILLS = ("grammar", "vocab")
+INCOMPLETE = "The AI reply was incomplete. Please try again."
+
+def clean_placement(r):
+    out = []
+    for x in r.get("items") if isinstance(r.get("items"), list) else []:
+        e = clean_ex(x)
+        if e and e["type"] in ("choice", "gap", "error") and x.get("level") in LEVELS and x.get("skill") in SKILLS:
+            out.append({**e, "level": x["level"], "skill": x["skill"]})
+    if len(out) < 6: raise ValueError(INCOMPLETE)
+    return {"items": sorted(out, key=lambda e: LEVELS.index(e["level"]))}  # stable: keeps the AI's order inside a level
+
+def clean_course(r):
+    s = lambda v, n: str(v)[:n]
+    lst = lambda k: [s(i, 100) for i in r[k]][:4] if isinstance(r.get(k), list) else []
+    units = []
+    for u in r.get("units") if isinstance(r.get("units"), list) else []:
+        try: x = {k: s(u.get(k, ""), 150) for k in ("grammar", "vocab", "practice", "writing")}
+        except AttributeError: continue
+        if x["grammar"].strip() and x["vocab"].strip(): units.append(x)
+    if len(units) < 3: raise ValueError(INCOMPLETE)
+    return {"summary": s(r.get("summary", ""), 400), "strengths": lst("strengths"), "weak": lst("weak"), "units": units[:12]}
+
 # ---- AI tasks
 def run_task(task, d):
     lv = d.get("level", "A1")
@@ -145,6 +168,20 @@ def run_task(task, d):
                '"structure":["1-3 patterns, like Subject + have/has + past participle"],"hints":["signal words or phrases that often go with it"],'
                '"examples":["3 short example sentences"],"watch":["2 common mistakes or tips"],"business":"one example sentence from a work situation",'
                + EX_SPEC + "}.", 1800, "{", "}"), ("title",))
+    if task == "placement":
+        return clean_placement(js("Make a placement test for a Vietnamese learner of English. 12 items: exactly 2 for each CEFR level A1, A2, B1, B2, C1, C2, "
+            "in that order, each clearly at its level; mix grammar and vocabulary (work contexts are fine from B1). Return JSON "
+            '{"items":[{"level":"A1","skill":"grammar or vocab","type":"choice","q":"sentence with ___","options":["a","b","c"],"answer":"b"},'
+            '{"level":"B1","skill":"grammar","type":"gap","q":"sentence with ___ and the base word in (brackets)","answer":["x"]},'
+            '{"level":"B2","skill":"vocab","type":"error","q":"sentence with one mistake","answer":["the corrected sentence"]}]} '
+            "Use only these three types.", 1800, "{", "}"))
+    if task == "course":
+        return clean_course(js(f"{source(d)}A placement test says the student's level is {lv}. Scores: {g('scores')}. Missed items: {g('missed')}. "
+            f"Writing sample (may be empty): {g('text')}\n"
+            "Make a personal course of 8 daily units for this student. Start at their level, cover weak areas first, end slightly harder. Return JSON "
+            '{"summary":"2 simple sentences about the student, in English","strengths":["2 short items"],"weak":["2-3 short items"],'
+            '"units":[{"grammar":"2-4 words, one grammar point","vocab":"2-4 words, a work/study topic",'
+            '"practice":"one short role-play or email idea","writing":"one short paragraph prompt"}]}.', 1500, "{", "}"))
     if task == "plan":
         return js(f"CEFR level {lv}. {source(d)}Plan today's English study for a Business English student. "
                   f"Recent topics to avoid: {g('avoid')}. Return JSON "

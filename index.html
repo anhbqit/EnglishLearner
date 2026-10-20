@@ -28,11 +28,19 @@ textarea{width:100%;box-sizing:border-box;min-height:120px}#t{min-height:0;flex:
 small,a{color:#777}
 </style>
 <main><header>English Learner 🌸 <button type=button id=g>Settings</button></header>
-<nav id=nav><button data-t=today class=on>Today</button><button data-t=chat>Chat</button><button data-t=cards>Vocabulary</button><button data-t=grammar>Grammar</button><button data-t=test>Test</button><button data-t=shadow>Shadowing</button><button data-t=music>YouTube</button><button data-t=book>Book</button></nav>
+<nav id=nav><button data-t=today class=on>Today</button><button data-t=place>My Course</button><button data-t=chat>Chat</button><button data-t=cards>Vocabulary</button><button data-t=grammar>Grammar</button><button data-t=test>Test</button><button data-t=shadow>Shadowing</button><button data-t=music>YouTube</button><button data-t=book>Book</button></nav>
 
 <section class="tab on" id=today>
 <div id=clock></div><div id=greet></div><small id=pinfo></small><small id=yday></small>
 <div class=row><small id=pmsg></small><button id=retry class="sec hide">Make today's plan</button></div><div id=tl></div></section>
+
+<section class=tab id=place>
+<small>A 5-minute test to find your level. Please don't use a dictionary. If you don't know an answer, guess or leave it blank. I will then make a personal course for you.</small>
+<div class=row><button id=pt>Start the test</button><small id=pst></small></div>
+<div class="card hide" id=pc><b>Part 1: 12 questions</b><div id=pe></div>
+<b>Part 2: Writing (optional)</b><br><small>Write 3-4 sentences about your goals for learning English. Please don't write your name or other personal info.</small>
+<textarea id=pw></textarea><div class=row><button id=pk>Finish and make my course</button></div></div>
+<div class="card hide" id=pr></div></section>
 
 <section class=tab id=chat>
 <div class=row><select id=mode><option value=chat>Free chat<option value=email>Business email<option value=roleplay>Role-play</select>
@@ -115,7 +123,8 @@ const jget=(k,d)=>JSON.parse(localStorage[k]||d);
 const dayStr=n=>new Date(Date.now()+(n||0)*864e5).toLocaleDateString("sv"); // yyyy-mm-dd, local time
 const el=(t,txt,cls)=>{const e=document.createElement(t);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e}; // textContent only: AI text is never HTML
 const setLevel=l=>{document.querySelectorAll(".lv").forEach(o=>o.value=l);localStorage.lv=l};
-document.querySelectorAll(".lv").forEach(s=>{["A1","A2","B1","B2","C1","C2"].forEach(l=>s.add(new Option(l)));s.value=localStorage.lv||"A1";s.onchange=()=>setLevel(s.value)});
+const LV=["A1","A2","B1","B2","C1","C2"];
+document.querySelectorAll(".lv").forEach(s=>{LV.forEach(l=>s.add(new Option(l)));s.value=localStorage.lv||"A1";s.onchange=()=>setLevel(s.value)});
 // call the AI; shows errors/progress in `out`, returns the result or undefined
 const ai=async(task,d,out)=>{out.textContent="Thinking...";const r=await post("/ai",{task,...d});out.textContent=r.error||"";return r.result};
 const bad=(out,r,...keys)=>{const x=!r||keys.some(k=>!Array.isArray(r[k]));if(x&&r)out.textContent="The AI reply was incomplete. Please try again.";return x};
@@ -130,7 +139,7 @@ const stats=()=>$("cst").textContent=`Saved: ${Object.keys(cards()).length} · D
 // book + plan helpers
 const PRESETS={"Destination B1":"B1","Destination B2":"B2","Destination C1 & C2":"C1"};
 let books=[],curP;
-const bk=()=>jget("bk",'{"name":""}'),plan=()=>jget("plan","null"),custom=()=>books.find(x=>x.name==bk().name);
+const bk=()=>jget("bk",'{"name":""}'),plan=()=>jget("plan","null"),course=()=>jget("course","null"),custom=()=>books.find(x=>x.name==bk().name);
 function nextPages(old){const b=bk(),cu=custom();if(!cu)return null;const from=b.from||1,to=b.to||cu.pages,ppd=b.ppd||2;let s=from;
  if(old&&old.pages&&old.book==b.name){const d=jget("log","{}")[old.date]||{};s=d.vocab&&d.grammar?old.pages[1]+1:old.pages[0]}
  if(s>to)s=from;return[s,Math.min(s+ppd-1,to)]}
@@ -143,7 +152,7 @@ const go=t=>{document.querySelectorAll("nav button,.tab").forEach(x=>x.classList
  document.querySelector(`[data-t=${t}]`).classList.add("on");$(t).classList.add("on");
  if(t=="test"){if(!$("tw").value)$("tw").value=words().slice(-8).join(", ");if(!$("tg").value)$("tg").value=localStorage.gtitle||"";
   $("tp").placeholder=(plan()||{}).writing||"Write your paragraph here..."}
- if(t=="cards"||t=="grammar")srcLine();if(t=="cards")stats();if(t=="today")today()};
+ if(t=="place")drawCourse();if(t=="cards"||t=="grammar")srcLine();if(t=="cards")stats();if(t=="today")today()};
 $("nav").onclick=e=>e.target.dataset.t&&go(e.target.dataset.t);
 
 // today: missions built from the daily plan (topics come from the AI, pages from the book)
@@ -161,18 +170,39 @@ function today(){shown=dayStr();const L=jget("log","{}"),t=L[shown]||{},y=L[dayS
  $("pinfo").textContent=(P.book?`Book: ${P.book}${P.pages?`, pages ${P.pages[0]}–${P.pages[1]}`:""}. `:"No book chosen (Book tab). ");
  $("yday").textContent=Object.keys(y).length?`Yesterday: ${y.vocab||0} vocab lessons, ${y.cards||0} cards, ${y.grammar||0} grammar, ${y.chat||0} messages, ${y.test||0} tests, ${y.shadow||0} videos.`:"Yesterday: no activity.";
  $("pmsg").textContent=planMsg;$("retry").classList.toggle("hide",!planMsg);
- $("tl").replaceChildren(...missions(P).map(m=>{const n=t[m.k]||0,d=el("div","","card"+(n>=m.goal?" done":"")),b=el("button","Go");
+ const intro=course()?[]:[(()=>{const d=el("div","","card"),b=el("button","Take the level test");b.onclick=()=>go("place");d.append("⭐ Start here: a 5-minute test so I can make your personal course. ",b);return d})()];
+  $("tl").replaceChildren(...intro,...missions(P).map(m=>{const n=t[m.k]||0,d=el("div","","card"+(n>=m.goal?" done":"")),b=el("button","Go");
   b.onclick=()=>{go(m.tab);m.run&&m.run()};d.append(`${n>=m.goal?"✓":"○"} ${m.name} (${Math.min(n,m.goal)}/${m.goal})`,el("br"),m.what+" ",b);return d}))}
 async function ensurePlan(){const b=bk(),old=plan();shown=dayStr(); // set first so the clock tick does not start it twice
  if(old&&old.date==shown&&old.book==b.name)return today();
- const pages=nextPages(old),o={textContent:""},r=await ai("plan",{level:$("lv1").value,avoid:jget("topics","[]").join(", "),book:b.name,from:pages?pages[0]:"",to:pages?pages[1]:""},o);
- planMsg=o.textContent;curP={date:shown,book:b.name,pages,due:dueCards().length,...(r||{})};
+ const pages=nextPages(old),o={textContent:""},C=course();
+ if(C){if(old&&old.date!=shown&&old.unit==C.idx){const d=jget("log","{}")[old.date]||{};if(d.vocab&&d.grammar)C.idx++} // both lessons done yesterday: next unit
+  localStorage.course=JSON.stringify(C)}
+ const u=C&&C.units[Math.min(C.idx,C.units.length-1)],r=C?{vocab_topic:u.vocab,grammar_topic:u.grammar,practice:u.practice,writing:u.writing,unit:C.idx}:await ai("plan",{level:$("lv1").value,avoid:jget("topics","[]").join(", "),book:b.name,from:pages?pages[0]:"",to:pages?pages[1]:""},o);
+ planMsg=C?(C.idx>=C.units.length?"You finished your course! Retake the level test for a new one.":""):o.textContent;curP={date:shown,book:b.name,pages,due:dueCards().length,...(r||{})};
  if(r){localStorage.plan=JSON.stringify(curP);localStorage.topics=JSON.stringify([...jget("topics","[]"),r.vocab_topic,r.grammar_topic].slice(-10))}
  today()}
 $("retry").onclick=ensurePlan;
 const tick=()=>{$("clock").textContent=new Date().toLocaleString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});
  if(shown!=dayStr())ensurePlan()};
 setInterval(tick,1000);tick();today();
+
+// level test -> personal course. The level is worked out here from the score; the AI only writes the course around it
+function drawCourse(){const C=course();$("pr").classList.toggle("hide",!C);$("pt").textContent=C?"Retake the test":"Start the test";if(!C)return;
+ secs($("pr"),[["Your level (a rough estimate; you can change it in any lesson)",C.level],["About you",C.summary],["Strengths",C.strengths],["Needs work",C.weak],
+  ["Your course (▶ is the next unit)",C.units.map((u,i)=>`${i<C.idx?"✓":i==C.idx?"▶":"○"} ${i+1}. ${u.grammar} + ${u.vocab}`)]])}
+function estLevel(items,res){let lvl="A1";for(const L of LV){const ix=items.map((x,i)=>x.level==L?i:-1).filter(i=>i>=0);if(!ix.length)continue;
+ if(ix.filter(i=>res[i]).length/ix.length<0.5)break;lvl=L}return lvl}
+let pl;
+$("pt").onclick=async()=>{if(course()&&!confirm("Retake the test? Your current course will be replaced."))return;
+ const r=await ai("placement",{},$("pst"));if(bad($("pst"),r,"items"))return;pl=r.items;mkEx($("pe"),pl);$("pw").value="";$("pc").classList.remove("hide")};
+$("pk").onclick=async()=>{const{res}=checkEx($("pe")),by={},cnt=L=>{const i=pl.map((x,k)=>x.level==L?k:-1).filter(k=>k>=0);return i.length?`${L}: ${i.filter(k=>res[k]).length}/${i.length}`:""};
+ pl.forEach((x,i)=>{by[x.skill]=by[x.skill]||[0,0];by[x.skill][1]++;by[x.skill][0]+=res[i]?1:0});
+ const lvl=estLevel(pl,res),scores=LV.map(cnt).filter(Boolean).join(", ")+"; "+Object.entries(by).map(([k,v])=>`${k} ${v[0]}/${v[1]}`).join(", "),
+  missed=pl.filter((x,i)=>!res[i]).map(x=>`${x.level} ${x.skill}: ${x.q||x.answer}`).join(" | ");
+ const r=await ai("course",{level:lvl,scores,missed,text:$("pw").value,book:bk().name},$("pst"));if(bad($("pst"),r,"units","strengths","weak"))return;
+ localStorage.course=JSON.stringify({level:lvl,idx:0,...r});localStorage.removeItem("plan");curP=null;setLevel(lvl);
+ $("pc").classList.add("hide");drawCourse();ensurePlan()};
 
 // book tab
 async function loadBooks(){books=(await(await fetch("/books")).json()).books||[];drawBk()}
@@ -224,13 +254,13 @@ function mkEx(ct,list){ct.replaceChildren();ct._list=list;
   if(x.type=="match"){const rs=shuffle(x.pairs.map(p=>p[1])),ss=x.pairs.map(p=>{const r=el("div","","row"),s=pick(rs);r.append(el("b",p[0]),s);d.append(r);return s});get=()=>ss.map(s=>s.value)}
   else{d.append(el("div",x.type=="order"?shuffle(x.answer.split(" ")).join("  /  "):x.q));const c=x.type=="choice"?pick(shuffle(x.options)):el("input");d.append(c);get=()=>c.value}
   ct.append(d);return get})}
-function checkEx(ct){let ok=0,tot=0;const open=[];
+function checkEx(ct){let ok=0,tot=0;const open=[],res=[];
  ct._list.forEach((x,i)=>{const d=ct.children[i],v=ct._get[i]();d.querySelector(".res")?.remove();
   if(x.type=="write"){open.push({q:x.q,v});return}
   const good=x.type=="match"?x.pairs.every((p,k)=>v[k]==p[1]):x.type=="choice"?v==x.answer:same(v,x.answer),
    r=el("div",good?"✓ Correct":"✗ Answer: "+(x.type=="match"?x.pairs.map(p=>p.join(" = ")).join("; "):[].concat(x.answer)[0]),"res");
-  r.style.color=good?"#2a7":"#c33";d.append(r);tot++;ok+=good});
- return{ok,tot,open}}
+  r.style.color=good?"#2a7":"#c33";d.append(r);tot++;ok+=good;res[i]=good});
+ return{ok,tot,open,res}}
 // shows the score at once; writing items (if any) are marked by the AI. Returns true when finished.
 async function gradeEx(ct,lv,title,out,fb){const{ok,tot,open}=checkEx(ct),s=tot?`Score: ${ok}/${tot}`:"";fb.textContent=s;
  if(!open.length)return true;
