@@ -16,10 +16,14 @@ input,select,button,textarea{font:inherit;padding:9px;border:1px solid #d9c7d0;b
 textarea{width:100%;box-sizing:border-box;min-height:120px}#t{min-height:0;flex:1;resize:vertical}
 .grow{flex:1}button{background:#e0679a;color:#fff;border:0;cursor:pointer}button.sec{background:#fff;color:#444;border:1px solid #d9c7d0}
 .card{background:#fff;border:1px solid #eadde3;border-radius:14px;padding:16px;margin:10px 0}
-.big{font-size:28px;font-weight:700}.fb{white-space:pre-wrap;margin-top:8px}.row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center}
+.big{font-size:28px;font-weight:700}.h2{font-size:20px;font-weight:700}.fb{white-space:pre-wrap;margin-top:8px}.row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center}
 .hide{display:none}.ex{margin:8px 0}.ex input,.ex select{width:100%;box-sizing:border-box}.w100{width:100%;box-sizing:border-box}
-.row img{border-radius:8px}.num{width:80px}#rv p{white-space:pre-wrap}.hm{display:grid;grid-template-rows:repeat(7,13px);grid-auto-flow:column;grid-auto-columns:13px;gap:3px;overflow-x:auto;padding:6px 0}.cell{width:13px;height:13px;border-radius:3px;cursor:pointer}.h0{background:#eadde3}.h1{background:#f7c8dc}.h2{background:#f19bc0}.h3{background:#e0679a}.h4{background:#b8326f}
+.row img{border-radius:8px}#rv p,#as p,#aw p{white-space:pre-wrap}.hm{display:grid;grid-template-rows:repeat(7,13px);grid-auto-flow:column;grid-auto-columns:13px;gap:3px;overflow-x:auto;padding:6px 0}.cell{width:13px;height:13px;border-radius:3px;cursor:pointer}.h0{background:#eadde3}.h1{background:#f7c8dc}.h2c{background:#f19bc0}.h3{background:#e0679a}.h4{background:#b8326f}
 #clock{font-size:20px;font-weight:700;margin:8px 0}.done{opacity:.55;text-decoration:line-through}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,103,154,.55)}50%{box-shadow:0 0 0 10px rgba(224,103,154,0)}}
+.alert{background:linear-gradient(90deg,#ffe3ef,#fff3c4);border:2px solid #e0679a;font-size:18px;animation:pulse 1.6s infinite}
+nav button.due{border-color:#e0679a;animation:pulse 1.6s infinite}nav button.due::after{content:" ●";color:#e0679a}nav button.on.due::after{color:#fff}
+@media (prefers-reduced-motion:reduce){.alert,nav button.due{animation:none}}
 #yt{width:100%;aspect-ratio:16/9;background:#000;border-radius:12px}
 #mpw{position:fixed;left:-9999px;top:0;width:200px;height:200px}#mpw.show{left:auto;right:12px;bottom:64px;z-index:9}
 #bar{display:flex;gap:6px;align-items:center;padding:8px 16px;background:#fff;border-top:1px solid #eadde3}
@@ -29,18 +33,17 @@ textarea{width:100%;box-sizing:border-box;min-height:120px}#t{min-height:0;flex:
 small,a{color:#777}
 </style>
 <main><header>English Learner 🌸 <button type=button id=g>Settings</button></header>
-<nav id=nav><button data-t=today class=on>Today</button><button data-t=review>Review</button><button data-t=place>My Course</button><button data-t=chat>Chat</button><button data-t=cards>Vocabulary</button><button data-t=grammar>Grammar</button><button data-t=test>Test</button><button data-t=shadow>Shadowing</button><button data-t=music>YouTube</button><button data-t=book>Book</button><button data-t=acct>Account</button></nav>
+<nav id=nav><button data-t=today class=on>Today</button><button data-t=review>Review</button><button data-t=place>My Course</button><button data-t=chat>Chat</button><button data-t=cards>Vocabulary</button><button data-t=grammar>Grammar</button><button data-t=test>Test</button><button data-t=shadow>Shadowing</button><button data-t=music>YouTube</button><button data-t=acct>Account</button></nav>
 
 <section class="tab on" id=today>
-<div id=clock></div><div id=greet></div><small id=pinfo></small><small id=yday></small>
-<div class=row><small id=pmsg></small><button id=retry class="sec hide">Make today's plan</button></div><div id=tl></div></section>
+<div id=clock></div><div id=greet></div><small id=yday></small><div id=tl></div></section>
 
 <section class=tab id=place>
-<small>A 5-minute test to find your level. Please don't use a dictionary. If you don't know an answer, guess or leave it blank. I will then make a personal course for you.</small>
+<small>A 5-minute test to find your level. Please don't use a dictionary. If you don't know an answer, guess or leave it blank. I will then make a personal practice plan for you.</small>
 <div class=row><button id=pt>Start the test</button><small id=pst></small></div>
 <div class="card hide" id=pc><b>Part 1: 12 questions</b><div id=pe></div>
 <b>Part 2: Writing (optional)</b><br><small>Write 3-4 sentences about your goals for learning English. Please don't write your name or other personal info.</small>
-<textarea id=pw></textarea><div class=row><button id=pk>Finish and make my course</button></div></div>
+<textarea id=pw></textarea><div class=row><button id=pk>Finish and make my plan</button></div></div>
 <div class="card hide" id=pr></div></section>
 
 <section class=tab id=review>
@@ -63,25 +66,31 @@ small,a{color:#777}
 <form class=c id=f><textarea id=t rows=2 placeholder="Type in English... (Enter to send, Shift+Enter for a new line)" autocomplete=off></textarea><button>Send</button></form></section>
 
 <section class=tab id=cards>
-<div class=row><select class=lv id=lv1></select><select id=acc><option value=en-US>American voice<option value=en-GB>British voice</select>
-<input id=vtopic class=grow placeholder="Topic (optional), e.g. meetings"></div>
-<div class=row><button id=nx>New lesson</button><button id=rvw class=sec>Review due words</button><small id=cst></small></div>
-<small id=vsrc></small><small id=st1></small>
-<div class="card hide" id=cd><b id=vt></b><p id=vin></p><small id=clabel></small><div id=cf></div><div class=row id=cn></div></div>
-<div class="card hide" id=vc><b>Practice</b> <small>(different kinds of exercises)</small><div id=ve></div><button id=vk>Check answers</button><div class=fb id=vf></div></div></section>
+<div class=row><select class=lv id=lv1></select><select id=acc><option value=en-US>American voice<option value=en-GB>British voice</select></div>
+<small>Choose a topic. The number shows how many words you learned out of 24.</small>
+<div class=row><select id=vtp class=grow></select><button id=vgo>Study</button></div>
+<div class=row><button id=rvw class=sec>Review due words</button><small id=cst></small></div><small id=st1></small></section>
 
 <section class=tab id=grammar>
-<div class=row><select class=lv id=lv2></select><input id=topic class=grow placeholder="Topic (optional), e.g. present perfect"><button id=gl>New lesson</button></div>
-<small id=gsrc></small><small id=st3></small>
-<details id=gpd><summary id=gph></summary><div id=gp></div></details>
-<div class="card hide" id=gc><b class=big id=gt></b><div id=gx></div><b>Practice</b><div id=ge></div><button id=gk>Check answers</button><div class=fb id=gf></div></div></section>
+<div class=row><select class=lv id=lv2></select><b id=gph></b></div>
+<small>Study the topics in order. A topic is learned when you score 60% or more in its exercises.</small><small id=st3></small>
+<div id=gp></div></section>
+
+<section class=tab id=study>
+<div class=row><button id=sback class=sec>← Back</button><span class=h2 id=stitle></span></div><small id=sst></small>
+<div id=gx class=hide></div>
+<div class="row hide" id=vbtn><button id=vnew>Learn 8 new words</button><button id=vprac class=sec>Practice these words</button></div>
+<div class="card hide" id=cd><small id=clabel></small><div id=cf></div><div class=row id=cn></div></div>
+<div class=hide id=sxw><b>Exercises</b><div id=sex></div>
+<div class=row><button id=sck>Check answers</button><button id=snew class=sec>New exercises</button><small id=sst2></small></div><div class=fb id=sfb></div>
+<div class=row><b id=smh></b><button id=smc class=sec>Clear</button></div><div id=smiss></div></div></section>
 
 <section class=tab id=test>
-<div class=row><select class=lv id=lv3></select><small>Write a paragraph using what you learned.</small></div>
-<label><small>Vocabulary to use</small><input id=tw class=w100></label>
-<label><small>Grammar to use</small><input id=tg class=w100></label>
-<textarea id=tp placeholder="Write your paragraph here..."></textarea>
-<div class=row><button id=tk>Check my paragraph</button><small id=st4></small></div><div class=fb id=tf></div></section>
+<small>This test is made from what you learned: your words, your grammar topics and your mistakes.</small>
+<div class=row><select class=lv id=lv3></select><button id=tg>Make my test</button><small id=st4></small></div><small id=tinfo></small>
+<div class="card hide" id=tc><b id=tt></b><div id=tex></div>
+<b>Paragraph</b><p id=tpp></p><small id=tpu></small><textarea id=tp placeholder="Write your paragraph here..."></textarea>
+<div class=row><button id=tk>Check my test</button></div><div class=fb id=tf></div></div></section>
 
 <section class=tab id=shadow>
 <div class=row><input id=yurl class=grow placeholder="Paste a YouTube link"><button id=yl>Load</button></div>
@@ -100,18 +109,10 @@ small,a{color:#777}
 
 <section class=tab id=music>
 <div class=row><input id=ps class=grow placeholder="Search YouTube (e.g. business english podcast)"><button id=pg>Search</button></div>
-<small id=sst></small><div id=sr></div>
+<small id=sst3></small><div id=sr></div>
 <div class=row><input id=pu class=grow placeholder="Or paste a YouTube link"><button id=pa class=sec>Add &amp; play</button></div>
 <small>Sound only: the video is hidden (use 🎬 in the bar below to show it). Search shows only videos that can be played here.</small>
 <b>My list</b><div id=pl></div></section>
-
-<section class=tab id=book>
-<small>Choose the book you study from. Upload its PDF to make lessons match the pages you are studying.</small>
-<div class=row><select id=bk class=grow></select></div>
-<div class=row><input type=file id=pf accept=".pdf,application/pdf"><small id=bst></small></div>
-<div class="row hide" id=bpg><span>Pages</span><input id=bfrom type=number min=1 class=num><span>to</span><input id=bto type=number min=1 class=num>
-<span>· Pages per day</span><input id=bppd type=number min=1 class=num></div>
-<small>Page numbers are PDF pages, not the printed numbers. The PDF text stays on this computer. For each lesson, about 3000 characters of the chosen pages are sent to the AI. Each day moves on to the next pages once you finish the vocabulary and grammar lessons.</small></section>
 
 <div id=bar><span>🎵</span><span id=mt>Music off</span>
 <button id=pv class=sec title="Previous track">⏮</button><button id=bb class=sec title="Back 10 seconds">⏪</button><button id=pp class=sec>▶</button><button id=ff class=sec title="Forward 10 seconds">⏩</button><button id=pn class=sec title="Next track">⏭</button>
@@ -137,19 +138,23 @@ const post=(u,b)=>fetch(u,{method:"POST",body:JSON.stringify(b)}).then(r=>r.json
 const jget=(k,d)=>JSON.parse(localStorage[k]||d);
 const dayStr=n=>new Date(Date.now()+(n||0)*864e5).toLocaleDateString("sv"); // yyyy-mm-dd, local time
 const el=(t,txt,cls)=>{const e=document.createElement(t);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e}; // textContent only: AI text is never HTML
-const setLevel=l=>{document.querySelectorAll(".lv").forEach(o=>o.value=l);localStorage.lv=l;drawPath()};
-const LV=["A1","A2","B1","B2","C1","C2"];
-document.querySelectorAll(".lv").forEach(s=>{LV.forEach(l=>s.add(new Option(l)));s.value=localStorage.lv||"A1";s.onchange=()=>setLevel(s.value)});
+const secs=(ct,pairs)=>ct.replaceChildren(...pairs.flatMap(([h,v])=>!v||!v.length?[]:[el("b",h),Array.isArray(v)?(u=>(v.forEach(x=>u.append(el("li",x))),u))(el("ul")):el("p",v)]));
+const LV=["A1","A2","B1","B2","C1","C2"],curLevel=()=>localStorage.lv||"A1";
+const setLevel=l=>{document.querySelectorAll(".lv").forEach(o=>o.value=l);localStorage.lv=l;drawPath();drawVTopics()};
+document.querySelectorAll(".lv").forEach(s=>{LV.forEach(l=>s.add(new Option(l)));s.value=curLevel();s.onchange=()=>setLevel(s.value)});
 // call the AI; shows errors/progress in `out`, returns the result or undefined
 const ai=async(task,d,out)=>{out.textContent="Thinking...";const r=await post("/ai",{task,...d});out.textContent=r.error||"";return r.result};
 const bad=(out,r,...keys)=>{const x=!r||keys.some(k=>!Array.isArray(r[k]));if(x&&r)out.textContent="The AI reply was incomplete. Please try again.";return x};
 
-// progress: saved words (spaced repetition) and a per-day activity log, all in localStorage
+// progress, all in localStorage (and copied to the server): saved words, a per-day activity log, a journal, mistakes
 const cards=()=>jget("cards","{}"),dueCards=()=>Object.values(cards()).filter(c=>c.due<=dayStr()).sort((a,b)=>a.due<b.due?-1:1);
-const words=()=>Object.values(cards()).sort((a,b)=>a.t-b.t).map(c=>c.word);
 const bump=k=>{const L=jget("log","{}"),d=dayStr();L[d]=L[d]||{};L[d][k]=(L[d][k]||0)+1;
  Object.keys(L).sort().slice(0,-400).forEach(x=>delete L[x]);localStorage.log=JSON.stringify(L)};
-// general CEFR grammar syllabus (my own list, not copied from a book). A topic is ticked when you score 60% or more on its exercises
+const jot=(k,v)=>{const J=jget("journal","{}"),d=dayStr();(J[d]=J[d]||[]).push({k,...v});Object.keys(J).sort().slice(0,-30).forEach(x=>delete J[x]);localStorage.journal=JSON.stringify(J)};
+const seen=(k,title)=>(jget("journal","{}")[dayStr()]||[]).some(e=>e.k==k&&e.title==title);
+const gdone=()=>jget("gdone","{}"),profile=()=>jget("profile","{}"),plan=()=>jget("plan","null"),course=()=>jget("course","null");
+const stats=()=>$("cst").textContent=`Saved: ${Object.keys(cards()).length} · Due today: ${dueCards().length}`;
+// my own general CEFR lists (not copied from a book): grammar topics, and vocabulary topics (24 words each)
 const SYLL={
 A1:["To be: am, is, are","Present simple","There is and there are","Articles: a, an, the","Plural nouns","Possessives and pronouns","Can and can't","Present continuous","Past simple: was, were and regular verbs","Prepositions of place and time"],
 A2:["Past simple: irregular verbs","Past continuous","Comparatives and superlatives","Countable and uncountable nouns","Going to and will","Present perfect: ever and never","Must and have to","Adverbs of manner and frequency","First conditional","Gerunds and infinitives (basic)","Question forms","Some, any, much and many"],
@@ -157,85 +162,84 @@ B1:["Present simple and present continuous","Stative verbs","Past simple and pas
 B2:["Narrative tenses","Present perfect and past simple","Future continuous and future perfect","Third conditional","Wish and if only","Mixed passive forms","Causative: have and get something done","Reporting verbs","Modal verbs of deduction in the past","Modal verbs in the past: should have, could have","Defining and non-defining relative clauses","Gerunds and infinitives: changes of meaning","Used to, be used to and get used to","Determiners: both, either, neither, all, each","Participle clauses","Linking words: contrast and result","Indirect questions","Adverbs and adverb position","Comparison: advanced structures"],
 C1:["Mixed conditionals","Inversion after negative adverbials","Cleft sentences","Advanced passives and impersonal structures","It's time, would rather and unreal past","Advanced future forms","Advanced modal verbs","Reduced relative clauses","Participle clauses: advanced","Ellipsis and substitution","Fronting and emphasis","Hedging and distancing language","Formal linking and discourse markers","Complex noun phrases","Alternative conditional linkers"],
 C2:["Advanced inversion and rhetorical word order","The subjunctive in formal English","Complex subordination","Nuance in modal verbs and certainty","Advanced ellipsis","Absolute and participle constructions","Formal and informal register choices","Agentless and academic passives","Hypothetical and unreal structures","Cohesion and reference","Tense and aspect for narrative effect","Concession and contrast: advanced"]};
-const gdone=()=>jget("gdone","{}"),profile=()=>jget("profile","{}");
+const VT={
+A1:["Family and friends","Food and drink","Daily routine","Home and rooms","Clothes and shopping","Numbers, time and dates","Weather and seasons","Hobbies and free time","Animals","Town and places","Transport","Body and health"],
+A2:["Travel and holidays","Jobs and workplaces","Sport and exercise","Technology and the internet","Money and prices","Films and music","School and education","Feelings and personality","Restaurants and cooking","Nature and the environment","The doctor and medicine","Hotels and booking"],
+B1:["Work and careers","Office life","Travel problems","News and media","Crime and the law","Health and fitness","Shopping and consumer habits","Studying and learning","Environment and pollution","Social media and technology","Relationships","Customer service","Events and entertainment"],
+B2:["Business meetings","Marketing and advertising","Money and banking","Management and leadership","Recruitment and interviews","Trade and globalisation","Science and innovation","Politics and society","Lifestyle and wellbeing","Arts and culture","Justice and crime","Behaviour and psychology","Communication at work"],
+C1:["Negotiation and deals","Company strategy","Economics and markets","Law and regulation","Ethics and responsibility","Research and academic life","The influence of the media","Sustainability","Innovation and new technology","Human resources","Diplomacy and international relations"],
+C2:["Abstract ideas and philosophy","Literature and rhetoric","The global economy","Law and governance","Science and ethics","Idioms and figurative language","Formal and academic language","Leading change","Culture and identity"]};
+const VPT=24;
 const nextTopic=L=>(SYLL[L]||[]).find(t=>!gdone()[L+"|"+t])||"";
+const topicCards=(L,t)=>Object.values(cards()).filter(c=>c.level==L&&c.topic==t);
+const nextVTopic=L=>(VT[L]||[]).find(t=>topicCards(L,t).length<VPT)||"";
+const mkKey=(kind,L,topic)=>`${kind}|${L}|${topic}`;
+const missedFor=k=>jget("missed","[]").filter(m=>m.k==k);
+function addMissed(k,wrong){if(!wrong.length)return;const M=jget("missed","[]"),d=dayStr();
+ wrong.forEach(w=>{const i=M.findIndex(m=>m.k==k&&m.q==w.q);if(i>=0)M.splice(i,1);M.push({...w,k,d})});localStorage.missed=JSON.stringify(M.slice(-300))}
+function resolveMissed(k,qs){const M=jget("missed","[]"),n=M.filter(m=>!(m.k==k&&qs.includes(m.q)));if(n.length!=M.length)localStorage.missed=JSON.stringify(n)}
 function setDone(k,on,s){const g=gdone();if(on)g[k]={s:s||"manual",d:dayStr()};else delete g[k];localStorage.gdone=JSON.stringify(g)}
 function levelUp(L){const i=LV.indexOf(L);if(!nextTopic(L)&&i<LV.length-1){setLevel(LV[i+1]);$("st3").textContent=`🎉 ${L} grammar complete! Moving to ${LV[i+1]}.`}}
-function drawPath(){const L=$("lv2").value,T=SYLL[L]||[],g=gdone();
- $("gph").textContent=`Grammar path ${L}: ${T.filter(t=>g[L+"|"+t]).length}/${T.length} topics learned (click to open)`;
- $("gp").replaceChildren(...T.map(t=>{const k=L+"|"+t,r=el("div","","row"),s=el("button","Study"),m=el("button",g[k]?"Undo ✓":"I know this","sec");
-  s.onclick=()=>{$("topic").value=t;$("gl").click();$("grammar").scrollTop=0};
-  m.onclick=()=>{setDone(k,!gdone()[k],"manual");levelUp(L);drawPath()};
-  r.append(el("span",(g[k]?"✓ ":"○ ")+t,"grow"),s,m);return r}))}
-const jot=(k,v)=>{const J=jget("journal","{}"),d=dayStr();(J[d]=J[d]||[]).push({k,...v});Object.keys(J).sort().slice(0,-30).forEach(x=>delete J[x]);localStorage.journal=JSON.stringify(J)};
-const stats=()=>$("cst").textContent=`Saved: ${Object.keys(cards()).length} · Due today: ${dueCards().length}`;
-
-// book + plan helpers
-const PRESETS={"Destination B1":"B1","Destination B2":"B2","Destination C1 & C2":"C1"};
-let books=[],curP;
-const bk=()=>jget("bk",'{"name":""}'),plan=()=>jget("plan","null"),course=()=>jget("course","null"),custom=()=>books.find(x=>x.name==bk().name);
-function nextPages(old){const b=bk(),cu=custom();if(!cu)return null;const from=b.from||1,to=b.to||cu.pages,ppd=b.ppd||2;let s=from;
- if(old&&old.pages&&old.book==b.name){const d=jget("log","{}")[old.date]||{};s=d.vocab&&d.grammar?old.pages[1]+1:old.pages[0]}
- if(s>to)s=from;return[s,Math.min(s+ppd-1,to)]}
-function curPages(){const p=plan();return p&&p.book==bk().name&&p.pages||nextPages(null)}
-const srcArgs=()=>{const pg=curPages();return{book:bk().name,from:pg?pg[0]:"",to:pg?pg[1]:""}};
-const srcLine=()=>{const b=bk().name,pg=curPages();$("vsrc").textContent=$("gsrc").textContent=b?`Source: ${b}${pg?`, pages ${pg[0]}–${pg[1]}`:""}. `:"No book chosen (see the Book tab). "};
 
 // tabs
 const go=t=>{document.querySelectorAll("nav button,.tab").forEach(x=>x.classList.remove("on"));
  document.querySelector(`[data-t=${t}]`).classList.add("on");$(t).classList.add("on");
- if(t=="test"){if(!$("tw").value)$("tw").value=words().slice(-8).join(", ");if(!$("tg").value)$("tg").value=localStorage.gtitle||"";
-  $("tp").placeholder=(plan()||{}).writing||"Write your paragraph here..."}
- if(t=="review"){if(!$("rd").value)$("rd").value=dayStr();drawReview()}if(t=="acct")drawAccount();if(t=="place")drawCourse();if(t=="cards"||t=="grammar")srcLine();if(t=="cards")stats();if(t=="today")today()};
+ if(t=="test")drawTestInfo();
+ if(t=="review"){if(!$("rd").value)$("rd").value=dayStr();drawReview()}
+ if(t=="acct")drawAccount();if(t=="place")drawCourse();if(t=="grammar")drawPath();if(t=="cards"){drawVTopics();stats()}if(t=="today")today();markTest()};
 $("nav").onclick=e=>e.target.dataset.t&&go(e.target.dataset.t);
 
-// today: missions built from the daily plan (topics come from the AI, pages from the book)
-const missions=P=>{const n=Math.min(P.due||0,10);return[
- {k:"vocab",name:"Vocabulary lesson",what:P.vocab_topic||"New words (the AI picks a topic)",goal:1,tab:"cards",run:()=>{$("vtopic").value=P.vocab_topic||"";$("nx").click()}},
+// the test reminder: something new was learned since the last test
+function testDue(){const m=jget("testmark","null")||{d:"",w:0,g:0},nw=Object.keys(cards()).length-m.w,ng=Object.keys(gdone()).length-m.g,
+ days=m.d?Math.round((new Date(dayStr())-new Date(m.d))/864e5):99;
+ return{nw,ng,due:(nw>0||ng>0)&&(nw>=8||ng>=1||days>=3)}}
+const markTest=()=>document.querySelector("[data-t=test]").classList.toggle("due",testDue().due);
+
+// today: missions. Vocabulary and grammar topics are the next ones on their paths; practice ideas come from your plan
+const DEF="Role-play a work situation or write a business email";
+const missions=P=>{const n=Math.min(P.due||0,10),L=P.L||curLevel();return[
+ {k:"vocab",name:"Vocabulary lesson",what:P.vocab_topic?`${P.vocab_topic}: learn 8 new words`:"You finished every topic at this level. Choose a higher level.",goal:1,tab:"cards",run:()=>P.vocab_topic&&openVocab(P.vocab_topic,L,true)},
  ...(n?[{k:"cards",name:"Review cards",what:`Review ${n} saved words`,goal:n,tab:"cards",run:()=>$("rvw").click()}]:[]),
- {k:"grammar",name:"Grammar lesson",what:P.grammar_topic||"One grammar point (the AI picks it)",goal:1,tab:"grammar",run:()=>{$("topic").value=P.grammar_topic||"";$("gl").click()}},
- {k:"chat",name:"Speaking & writing",what:P.practice||"Role-play or write a business email",goal:3,tab:"chat"},
- {k:"test",name:"Writing test",what:P.writing||"Write a short paragraph with today's words",goal:1,tab:"test"},
+ {k:"grammar",name:"Grammar lesson",what:P.grammar_topic||"You finished every grammar topic at this level. Choose a higher level.",goal:1,tab:"grammar",run:()=>P.grammar_topic&&openGrammar(P.grammar_topic,L)},
+ {k:"chat",name:"Speaking & writing",what:P.practice||DEF,goal:3,tab:"chat"},
+ {k:"test",name:"Progress test",what:"Take a test made from what you have learned",goal:1,tab:"test"},
  {k:"shadow",name:"Listening",what:"Shadow 1 video",goal:1,tab:"shadow"}]};
-let shown,planMsg="";
-function today(){shown=dayStr();const L=jget("log","{}"),t=L[shown]||{},y=L[dayStr(-1)]||{},h=new Date().getHours(),s=plan();
- const P=s&&s.date==shown&&s.book==bk().name?s:curP&&curP.date==shown?curP:{date:shown,book:bk().name,pages:nextPages(null),due:dueCards().length};
+let shown;
+function today(){shown=dayStr();const L=jget("log","{}"),t=L[shown]||{},y=L[dayStr(-1)]||{},h=new Date().getHours(),P=plan()||{},C=course(),td=testDue(),box=[];
  $("greet").textContent=`${h<12?"Good morning":h<18?"Good afternoon":"Good evening"}${profile().name?", "+profile().name:""}! Here are your missions for today.`;
- $("pinfo").textContent=(P.book?`Book: ${P.book}${P.pages?`, pages ${P.pages[0]}–${P.pages[1]}`:""}. `:"No book chosen (Book tab). ");
  $("yday").textContent=Object.keys(y).length?`Yesterday: ${y.vocab||0} vocab lessons, ${y.cards||0} cards, ${y.grammar||0} grammar, ${y.chat||0} messages, ${y.test||0} tests, ${y.shadow||0} videos.`:"Yesterday: no activity.";
- $("pmsg").textContent=planMsg;$("retry").classList.toggle("hide",!planMsg);
- const intro=course()?[]:[(()=>{const d=el("div","","card"),b=el("button","Take the level test");b.onclick=()=>go("place");d.append("⭐ Start here: a 5-minute test so I can make your personal course. ",b);return d})()];
-  $("tl").replaceChildren(...intro,...missions(P).map(m=>{const n=t[m.k]||0,d=el("div","","card"+(n>=m.goal?" done":"")),b=el("button","Go");
-  b.onclick=()=>{go(m.tab);m.run&&m.run()};d.append(`${n>=m.goal?"✓":"○"} ${m.name} (${Math.min(n,m.goal)}/${m.goal})`,el("br"),m.what+" ",b);return d}))}
-async function ensurePlan(){const b=bk(),old=plan();shown=dayStr(); // set first so the clock tick does not start it twice
- if(old&&old.date==shown&&old.book==b.name)return today();
- const pages=nextPages(old),o={textContent:""},C=course();
- if(C){if(old&&old.date!=shown&&old.unit==C.idx){const d=jget("log","{}")[old.date]||{};if(d.vocab&&d.grammar)C.idx++} // both lessons done yesterday: next unit
+ if(td.due){const a=el("div","","card alert"),b=el("button","Take the test now");b.onclick=()=>{go("test");$("tg").click()};
+  a.append(el("b","📝 Test time!"),el("br"),`Since your last test you learned ${td.nw} new words and ${td.ng} grammar topics. Take the test to see what you remember. `,b);box.push(a)}
+ if(!C){const d=el("div","","card"),b=el("button","Take the level test");b.onclick=()=>go("place");d.append("⭐ Start here: a 5-minute test so I can make your personal practice plan. ",b);box.push(d)}
+ else if(C.idx>=C.units.length)box.push(el("div","🎉 You finished your practice plan! Retake the level test (My Course) for a new one.","card"));
+ $("tl").replaceChildren(...box,...missions(P).map(m=>{const n=t[m.k]||0,d=el("div","","card"+(n>=m.goal?" done":"")),b=el("button","Go");
+  b.onclick=()=>{go(m.tab);m.run&&m.run()};d.append(`${n>=m.goal?"✓":"○"} ${m.name} (${Math.min(n,m.goal)}/${m.goal})`,el("br"),m.what+" ",b);return d}));markTest()}
+function ensurePlan(){shown=dayStr();const old=plan();if(old&&old.date==shown&&old.v==2)return today(); // set first so the clock tick does not start it twice
+ const C=course();
+ if(C){if(old&&old.date!=shown&&old.unit==C.idx){const d=jget("log","{}")[old.date]||{};if(d.vocab&&d.grammar)C.idx++} // both lessons done yesterday: next idea
   localStorage.course=JSON.stringify(C)}
- const u=C&&C.units[Math.min(C.idx,C.units.length-1)],r=C?{vocab_topic:u.vocab,grammar_topic:nextTopic($("lv2").value)||u.grammar,practice:u.practice,writing:u.writing,unit:C.idx}:await ai("plan",{level:$("lv1").value,avoid:jget("topics","[]").join(", "),book:b.name,from:pages?pages[0]:"",to:pages?pages[1]:""},o);
- planMsg=C?(C.idx>=C.units.length?"You finished your course! Retake the level test for a new one.":""):o.textContent;curP={date:shown,book:b.name,pages,due:dueCards().length,...(r||{})};
- if(r){localStorage.plan=JSON.stringify(curP);localStorage.topics=JSON.stringify([...jget("topics","[]"),r.vocab_topic,r.grammar_topic].slice(-10))}
+ const u=C&&C.units[Math.min(C.idx,C.units.length-1)],L=curLevel();
+ localStorage.plan=JSON.stringify({v:2,date:shown,L,unit:C?C.idx:null,due:dueCards().length,vocab_topic:nextVTopic(L),grammar_topic:nextTopic(L),practice:u?u.practice:DEF});
  today()}
-$("retry").onclick=ensurePlan;
 const tick=()=>{$("clock").textContent=new Date().toLocaleString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});
  if(shown!=dayStr())ensurePlan()};
-setInterval(tick,1000);tick();today();
 
-// day review: reads the journal (what you learned) and the log (counts) for one day. No AI call, no cost
+// day review: reads the journal (what you learned), the log (counts) and your mistakes for one day. No AI call, no cost
 function drawReview(){const d=$("rd").value||dayStr(),J=jget("journal","{}")[d]||[],L=jget("log","{}")[d]||{},of=k=>J.filter(e=>e.k==k),last={};
  of("wcheck").forEach(e=>last[e.w]=e.ok);const ws=ok=>Object.keys(last).filter(w=>last[w]==ok).join(", ");
- const names={vocab:"Vocabulary lessons",cards:"Words written",grammar:"Grammar lessons",chat:"Chat messages",test:"Writing tests",shadow:"Shadowing videos"},C=course();
- const due=Object.values(cards()).filter(c=>c.due<=dayStr(1)).length,u=C&&C.units[Math.min(C.idx+(L.vocab&&L.grammar?1:0),C.units.length-1)];
+ const names={vocab:"Vocabulary lessons",cards:"Words written",grammar:"Grammar lessons",chat:"Chat messages",test:"Tests",shadow:"Shadowing videos"};
+ const due=Object.values(cards()).filter(c=>c.due<=dayStr(1)).length,nv=nextVTopic(curLevel()),ng=nextTopic(curLevel());
  secs($("rv"),[["Done",Object.entries(names).filter(([k])=>L[k]).map(([k,n])=>`${n}: ${L[k]}`)],
   ["New vocabulary",of("vlesson").map(e=>`${e.title}: ${e.words.join(", ")}`)],["Words you wrote correctly ✓",ws(true)],["Words to practice again ✗",ws(false)],
   ["Grammar",of("glesson").map(e=>e.title)],["Exercise scores",of("vscore").concat(of("gscore")).map(e=>`${e.title}: ${e.s}`)],
-  ["Writing test feedback",of("test").map(e=>e.fb).join("\n\n")],
-  ...(d==dayStr()?[["Tomorrow",[`Words due for review: ${due}`,...(u?[`Next vocabulary topic: ${u.vocab}`]:[]),...(nextTopic($("lv2").value)?[`Next grammar topic: ${nextTopic($("lv2").value)}`]:[])]]]:[])]);
+  ["Mistakes to review",jget("missed","[]").filter(m=>m.d==d).map(m=>`${m.q} — you: ${m.yours||"(blank)"} — answer: ${m.answer}`)],
+  ["Test feedback",of("test").map(e=>e.fb).join("\n\n")],
+  ...(d==dayStr()?[["Tomorrow",[`Words due for review: ${due}`,...(nv?[`Next vocabulary topic: ${nv}`]:[]),...(ng?[`Next grammar topic: ${ng}`]:[])]]]:[])]);
  if(!J.length&&!Object.keys(L).length)$("rv").prepend(el("p","Nothing was recorded for this day."))}
 $("rd").onchange=drawReview;
 
-// account: stats, activity map, word progress, grammar path. Progress is also saved on the server (this is the cloud copy)
-const SYNC=["cards","log","journal","plan","course","bk","lv","topics","plist","gdone","profile","gtitle"];
+// account: stats, activity map, word progress, topic paths. Progress is also saved on the server (this is the cloud copy)
+const SYNC=["cards","log","journal","plan","course","lv","plist","gdone","profile","lessons","missed","testmark"];
 let synced="",syncMsg="";
 const snap=()=>{const d={};SYNC.forEach(k=>{if(localStorage[k]!=null)d[k]=localStorage[k]});return d};
 async function syncUp(){const d=snap(),j=JSON.stringify(d);if(j==synced)return;
@@ -247,48 +251,60 @@ function drawAccount(){const L=jget("log","{}"),act=d=>Object.values(L[d]||{}).r
  $("pname").value=profile().name||"";$("sync").textContent=syncMsg||"Progress is saved to the server automatically.";
  secs($("as"),[["Learning",[`Days learning: ${days.length}${days.length?` (since ${days[0]})`:""}`,`Current streak: ${cur} day(s) · Longest streak: ${best} day(s)`,`Activities in total: ${days.reduce((a,d)=>a+act(d),0)}`]]]);
  const dow=(new Date().getDay()+6)%7,hm=$("ah");hm.replaceChildren(); // 20 weeks, Monday first; one square per day
- for(let k=19*7+dow;k>=0;k--){const d=dayStr(-k),n=act(d),c=el("div","","cell h"+(n?n<5?1:n<10?2:n<20?3:4:0));c.title=`${d}: ${n} activities`;c.onclick=()=>{$("rd").value=d;go("review")};hm.append(c)}
+ for(let k=19*7+dow;k>=0;k--){const d=dayStr(-k),n=act(d),c=el("div","","cell "+(n?n<5?"h1":n<10?"h2c":n<20?"h3":"h4":"h0"));c.title=`${d}: ${n} activities`;c.onclick=()=>{$("rd").value=d;go("review")};hm.append(c)}
  const cs=Object.values(cards()),rem=cs.filter(c=>c.box>=3),skp=cs.filter(c=>c.skipped),g=gdone();
  secs($("aw"),[["Words",[`Learnt: ${cs.length}`,`Remembered (written correctly 3 times in a row): ${rem.length}`,`Still learning: ${cs.length-rem.length-skp.length}`,`Skipped: ${skp.length}`]],
   ["Remembered words",rem.map(c=>c.word).join(", ")],["Skipped words (they come back tomorrow)",skp.map(c=>c.word).join(", ")],
+  ["Vocabulary topics",Object.keys(VT).map(L=>`${L}: ${VT[L].filter(t=>topicCards(L,t).length>=VPT).length}/${VT[L].length} topics complete`)],
   ["Grammar path",Object.keys(SYLL).map(L=>`${L}: ${SYLL[L].filter(t=>g[L+"|"+t]).length}/${SYLL[L].length} topics`)]])}
 $("pname").onchange=()=>{localStorage.profile=JSON.stringify({name:$("pname").value.trim().slice(0,30)});today()};
 
-// level test -> personal course. The level is worked out here from the score; the AI only writes the course around it
+// exercises: 6 kinds. choice/gap/order/match/error are checked here for free; only "write" items go to the AI
+const LABEL={choice:"Choose the correct answer",gap:"Fill the gap",order:"Put the words in order",match:"Match each item",error:"Find the mistake and write the sentence correctly",write:"Write your own answer"};
+const norm=s=>String(s).toLowerCase().replace(/[’‘]/g,"'").replace(/[^\p{L}\p{N}' ]/gu," ").replace(/\s+/g," ").trim();
+const same=(v,ans)=>[].concat(ans).some(a=>norm(a)==norm(v));
+const shuffle=a=>{a=[...a];for(let i=a.length;i>1;){const j=Math.floor(Math.random()*i--);[a[i],a[j]]=[a[j],a[i]]}return a};
+const pick=opts=>{const s=el("select");s.add(new Option("— choose —",""));opts.forEach(o=>s.add(new Option(o,o)));return s};
+function mkEx(ct,list){ct.replaceChildren();ct._list=list;
+ ct._get=list.map((x,i)=>{const d=el("div","","ex");d.append(el("small",`${i+1}. ${LABEL[x.type]}`),el("br"));let get;
+  if(x.type=="match"){const rs=shuffle(x.pairs.map(p=>p[1])),ss=x.pairs.map(p=>{const r=el("div","","row"),s=pick(rs);r.append(el("b",p[0]),s);d.append(r);return s});get=()=>ss.map(s=>s.value)}
+  else{d.append(el("div",x.type=="order"?shuffle(x.answer.split(" ")).join("  /  "):x.q));const c=x.type=="choice"?pick(shuffle(x.options)):el("input");d.append(c);get=()=>c.value}
+  ct.append(d);return get})}
+const qText=x=>x.type=="match"?"Match: "+x.pairs.map(p=>p[0]).join(", "):x.type=="order"?"Word order: "+x.answer:x.q;
+const ansText=x=>x.type=="match"?x.pairs.map(p=>p.join(" = ")).join("; "):[].concat(x.answer)[0];
+function checkEx(ct){let ok=0,tot=0;const open=[],res=[],wrong=[],right=[];
+ ct._list.forEach((x,i)=>{const d=ct.children[i],v=ct._get[i]();d.querySelector(".res")?.remove();
+  if(x.type=="write"){open.push({q:x.q,v});return}
+  const good=x.type=="match"?x.pairs.every((p,k)=>v[k]==p[1]):x.type=="choice"?v==x.answer:same(v,x.answer),
+   r=el("div",good?"✓ Correct":"✗ Answer: "+ansText(x),"res");
+  r.style.color=good?"#2a7":"#c33";d.append(r);tot++;ok+=good;res[i]=good;
+  (good?right:wrong).push({q:qText(x),yours:x.type=="match"?v.join(", "):v,answer:ansText(x)})});
+ return{ok,tot,open,res,wrong,right}}
+// shows the score at once and remembers wrong answers under `key`; writing items (if any) are marked by the AI. Returns true when finished.
+async function gradeEx(ct,lv,title,out,fb,key){const{ok,tot,open,wrong,right}=checkEx(ct),s=(ct._score=[ok,tot],tot)?`Score: ${ok}/${tot}`:"";fb.textContent=s;
+ if(key){resolveMissed(key,right.map(w=>w.q));addMissed(key,wrong);drawMissed()}
+ if(!open.length)return true;
+ const r=await ai("grade",{level:lv,title,qa:open.map(o=>o.q+" -> "+(o.v||"(blank)")).join("\n")},out);
+ if(r)fb.textContent=(s?s+"\n\n":"")+"Writing feedback:\n"+r;return !!r}
+const say=t=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=$("acc").value;speechSynthesis.speak(u)};
+const spk=t=>{const b=el("button","🔊","sec");b.onclick=()=>say(t);return b};
+
+// level test -> personal practice plan. The level is worked out here from the score; the AI only writes the plan around it
 function drawCourse(){const C=course();$("pr").classList.toggle("hide",!C);$("pt").textContent=C?"Retake the test":"Start the test";if(!C)return;
  secs($("pr"),[["Your level (a rough estimate; you can change it in any lesson)",C.level],["About you",C.summary],["Strengths",C.strengths],["Needs work",C.weak],
-  ["Vocabulary course (▶ is the next unit; grammar follows the Grammar path)",C.units.map((u,i)=>`${i<C.idx?"✓":i==C.idx?"▶":"○"} ${i+1}. ${u.vocab}`)]])}
+  ["Practice plan (▶ is today's idea; grammar and vocabulary follow their own paths)",C.units.map((u,i)=>`${i<C.idx?"✓":i==C.idx?"▶":"○"} ${i+1}. ${u.practice}`)]])}
 function estLevel(items,res){let lvl="A1";for(const L of LV){const ix=items.map((x,i)=>x.level==L?i:-1).filter(i=>i>=0);if(!ix.length)continue;
  if(ix.filter(i=>res[i]).length/ix.length<0.5)break;lvl=L}return lvl}
 let pl;
-$("pt").onclick=async()=>{if(course()&&!confirm("Retake the test? Your current course will be replaced."))return;
+$("pt").onclick=async()=>{if(course()&&!confirm("Retake the test? Your current plan will be replaced."))return;
  const r=await ai("placement",{},$("pst"));if(bad($("pst"),r,"items"))return;pl=r.items;mkEx($("pe"),pl);$("pw").value="";$("pc").classList.remove("hide")};
 $("pk").onclick=async()=>{const{res}=checkEx($("pe")),by={},cnt=L=>{const i=pl.map((x,k)=>x.level==L?k:-1).filter(k=>k>=0);return i.length?`${L}: ${i.filter(k=>res[k]).length}/${i.length}`:""};
  pl.forEach((x,i)=>{by[x.skill]=by[x.skill]||[0,0];by[x.skill][1]++;by[x.skill][0]+=res[i]?1:0});
  const lvl=estLevel(pl,res),scores=LV.map(cnt).filter(Boolean).join(", ")+"; "+Object.entries(by).map(([k,v])=>`${k} ${v[0]}/${v[1]}`).join(", "),
   missed=pl.filter((x,i)=>!res[i]).map(x=>`${x.level} ${x.skill}: ${x.q||x.answer}`).join(" | ");
- const r=await ai("course",{level:lvl,scores,missed,text:$("pw").value,book:bk().name},$("pst"));if(bad($("pst"),r,"units","strengths","weak"))return;
- localStorage.course=JSON.stringify({level:lvl,idx:0,...r});localStorage.removeItem("plan");curP=null;setLevel(lvl);
+ const r=await ai("course",{level:lvl,scores,missed,text:$("pw").value},$("pst"));if(bad($("pst"),r,"units","strengths","weak"))return;
+ localStorage.course=JSON.stringify({level:lvl,idx:0,...r});localStorage.removeItem("plan");setLevel(lvl);
  $("pc").classList.add("hide");drawCourse();ensurePlan()};
-
-// book tab
-async function loadBooks(){books=(await(await fetch("/books")).json()).books||[];drawBk()}
-function drawBk(){const b=bk(),sel=$("bk"),names=[...new Set([...Object.keys(PRESETS),...books.map(x=>x.name)])];
- sel.replaceChildren(new Option("No book (level only)",""),...names.map(n=>{const u=books.find(x=>x.name==n);return new Option(n+(u?` – PDF, ${u.pages} pages`:""),n)}));
- sel.value=b.name;const cu=custom();$("bpg").classList.toggle("hide",!cu);if(cu){$("bfrom").value=b.from||1;$("bto").value=b.to||cu.pages;$("bppd").value=b.ppd||2}}
-function setBook(o){localStorage.bk=JSON.stringify(o);localStorage.removeItem("plan");curP=null;if(PRESETS[o.name])setLevel(PRESETS[o.name]);drawBk();srcLine();ensurePlan()}
-$("bk").onchange=()=>{const n=$("bk").value,u=books.find(x=>x.name==n);setBook({name:n,from:1,to:u?u.pages:0,ppd:2})};
-["bfrom","bto","bppd"].forEach(i=>$(i).onchange=()=>{const cu=custom(),n=v=>Math.max(1,+$(v).value||1);
- setBook({name:bk().name,from:Math.min(n("bfrom"),cu.pages),to:Math.min(Math.max(n("bto"),n("bfrom")),cu.pages),ppd:n("bppd")})});
-const PDFJS="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/"; // loaded only when you upload a PDF
-async function readPdf(data,say){const lib=await import(PDFJS+"pdf.min.mjs");lib.GlobalWorkerOptions.workerSrc=PDFJS+"pdf.worker.min.mjs";
- const doc=await lib.getDocument({data}).promise,pages=[];
- for(let i=1;i<=doc.numPages;i++){say(`Reading page ${i}/${doc.numPages}...`);pages.push((await(await doc.getPage(i)).getTextContent()).items.map(x=>x.str).join(" "))}
- if(pages.join("").trim().length<50)throw new Error("This PDF has no text (maybe scanned pictures), so I cannot read it.");return pages}
-$("pf").onchange=async()=>{const f=$("pf").files[0];if(!f)return;const say=t=>$("bst").textContent=t;
- try{say("Loading PDF reader...");const pages=await readPdf(await f.arrayBuffer(),say);
-  const r=await post("/book",{name:f.name.replace(/\.pdf$/i,""),pages});if(r.error)throw new Error(r.error);
-  await loadBooks();$("bk").value=r.name;$("bk").onchange();say(`Done ✓ ${pages.length} pages saved.`)}catch(e){say(e.message||String(e))}};
 
 // settings
 const loadSettings=async()=>{const s=await(await fetch("/settings")).json();
@@ -310,82 +326,103 @@ $("f").onsubmit=e=>{e.preventDefault();const t=$("t").value.trim();if(t){$("t").
 $("t").onkeydown=e=>{if(e.key=="Enter"&&!e.shiftKey){e.preventDefault();$("f").requestSubmit()}};
 add("a",HINT.chat);
 
-// exercises: 6 kinds. choice/gap/order/match/error are checked here for free; only "write" items go to the AI
-const LABEL={choice:"Choose the correct answer",gap:"Fill the gap",order:"Put the words in order",match:"Match each item",error:"Find the mistake and write the sentence correctly",write:"Write your own answer"};
-const norm=s=>String(s).toLowerCase().replace(/[’‘]/g,"'").replace(/[^\p{L}\p{N}' ]/gu," ").replace(/\s+/g," ").trim();
-const same=(v,ans)=>[].concat(ans).some(a=>norm(a)==norm(v));
-const shuffle=a=>{a=[...a];for(let i=a.length;i>1;){const j=Math.floor(Math.random()*i--);[a[i],a[j]]=[a[j],a[i]]}return a};
-const pick=opts=>{const s=el("select");s.add(new Option("— choose —",""));opts.forEach(o=>s.add(new Option(o,o)));return s};
-function mkEx(ct,list){ct.replaceChildren();ct._list=list;
- ct._get=list.map((x,i)=>{const d=el("div","","ex");d.append(el("small",`${i+1}. ${LABEL[x.type]}`),el("br"));let get;
-  if(x.type=="match"){const rs=shuffle(x.pairs.map(p=>p[1])),ss=x.pairs.map(p=>{const r=el("div","","row"),s=pick(rs);r.append(el("b",p[0]),s);d.append(r);return s});get=()=>ss.map(s=>s.value)}
-  else{d.append(el("div",x.type=="order"?shuffle(x.answer.split(" ")).join("  /  "):x.q));const c=x.type=="choice"?pick(shuffle(x.options)):el("input");d.append(c);get=()=>c.value}
-  ct.append(d);return get})}
-function checkEx(ct){let ok=0,tot=0;const open=[],res=[];
- ct._list.forEach((x,i)=>{const d=ct.children[i],v=ct._get[i]();d.querySelector(".res")?.remove();
-  if(x.type=="write"){open.push({q:x.q,v});return}
-  const good=x.type=="match"?x.pairs.every((p,k)=>v[k]==p[1]):x.type=="choice"?v==x.answer:same(v,x.answer),
-   r=el("div",good?"✓ Correct":"✗ Answer: "+(x.type=="match"?x.pairs.map(p=>p.join(" = ")).join("; "):[].concat(x.answer)[0]),"res");
-  r.style.color=good?"#2a7":"#c33";d.append(r);tot++;ok+=good;res[i]=good});
- return{ok,tot,open,res}}
-// shows the score at once; writing items (if any) are marked by the AI. Returns true when finished.
-async function gradeEx(ct,lv,title,out,fb){const{ok,tot,open}=checkEx(ct),s=(ct._score=[ok,tot],tot)?`Score: ${ok}/${tot}`:"";fb.textContent=s;
- if(!open.length)return true;
- const r=await ai("grade",{level:lv,title,qa:open.map(o=>o.q+" -> "+(o.v||"(blank)")).join("\n")},out);
- if(r)fb.textContent=(s?s+"\n\n":"")+"Writing feedback:\n"+r;return !!r}
-const say=t=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=$("acc").value;speechSynthesis.speak(u)};
-const spk=t=>{const b=el("button","🔊","sec");b.onclick=()=>say(t);return b};
+// grammar tab: the path (checklist) for the chosen level
+function drawPath(){const L=$("lv2").value,T=SYLL[L]||[],g=gdone(),M=jget("missed","[]");
+ $("gph").textContent=`Grammar path ${L}: ${T.filter(t=>g[L+"|"+t]).length}/${T.length} topics learned`;
+ $("gp").replaceChildren(...T.map(t=>{const k=L+"|"+t,n=M.filter(m=>m.k=="grammar|"+k).length,r=el("div","","row"),s=el("button","Study"),m=el("button",g[k]?"Undo ✓":"I know this","sec");
+  s.onclick=()=>openGrammar(t,L);m.onclick=()=>{setDone(k,!gdone()[k],"manual");levelUp(L);drawPath()};
+  r.append(el("span",`${g[k]?"✓":"○"} ${t}${g[k]&&g[k].s!="manual"?` (${g[k].s})`:""}${n?` · ${n} missed`:""}`,"grow"),s,m);return r}))}
+// vocabulary tab: topics of the chosen level with learned words / 24
+function drawVTopics(){const L=$("lv1").value,sel=$("vtp"),keep=sel.value;
+ sel.replaceChildren(...(VT[L]||[]).map(t=>{const n=topicCards(L,t).length;return new Option(`${n>=VPT?"✓ ":""}${t} — ${n}/${VPT}`,t)}));
+ sel.value=VT[L].includes(keep)?keep:nextVTopic(L)||VT[L][0]}
+$("vgo").onclick=()=>openVocab($("vtp").value,$("lv1").value);
 
-// vocabulary flashcards: learn all the words, then write each one. Progress is saved (next review after 1,2,4,8,16,32 days)
+// study page: one page (under the tab list) for a grammar topic, a vocabulary topic or a card review
+let S={};
+function showStudy(s){S=s;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));$("study").classList.add("on");$("study").scrollTop=0;
+ $("stitle").textContent=s.title;["gx","cd","vbtn","sxw"].forEach(i=>$(i).classList.add("hide"));$("gx").replaceChildren();$("sex").replaceChildren();
+ $("sst").textContent=$("sst2").textContent=$("sfb").textContent=""}
+$("sback").onclick=()=>go(S.back||"today");
+function drawMissed(){const M=S.k?missedFor(S.k).reverse():[];$("smh").textContent=`What I missed (${M.length})`;$("smc").classList.toggle("hide",!M.length);
+ $("smiss").replaceChildren(...M.map(m=>{const d=el("div","","ex");d.append(el("small",m.d+" · "+m.q),el("br"),`Your answer: ${m.yours||"(blank)"}  →  correct: ${m.answer}`);return d}))}
+$("smc").onclick=()=>{localStorage.missed=JSON.stringify(jget("missed","[]").filter(m=>m.k!=S.k));drawMissed()};
+function showEx(list){mkEx($("sex"),list);$("sxw").classList.remove("hide");$("sfb").textContent="";drawMissed()}
+async function openGrammar(topic,L){L=L||curLevel();const k=mkKey("grammar",L,topic);showStudy({kind:"grammar",L,topic,k,back:"grammar",title:`${topic} (${L})`});
+ let r=jget("lessons","{}")[k];
+ if(!r){r=await ai("grammar",{level:L,topic},$("sst"));if(bad($("sst"),r,"exercises")||S.k!=k)return;const c=jget("lessons","{}");c[k]=r;localStorage.lessons=JSON.stringify(c)}
+ if(S.k!=k)return;
+ if(!seen("glesson",topic))jot("glesson",{title:topic});
+ secs($("gx"),[["What is it?",r.what],["How to use it",r.use],["Structure",r.structure],["Helpful hints",r.hints],["Examples",r.examples],["Watch out!",r.watch],["At work",r.business]]);
+ $("gx").classList.remove("hide");showEx(r.exercises)}
+function vocabHome(){const{L,topic}=S,cs=topicCards(L,topic);S.title=`${topic} (${cs.length}/${VPT} words)`;$("stitle").textContent=S.title;
+ secs($("gx"),[["Words you learned in this topic",cs.map(c=>`${c.word} – ${c.vi}`)]]);$("gx").classList.remove("hide");
+ $("vbtn").classList.remove("hide");$("vprac").classList.toggle("hide",!cs.length);$("sxw").classList.toggle("hide",!cs.length);drawMissed()}
+function openVocab(topic,L,learn){L=L||curLevel();showStudy({kind:"vocab",L,topic,k:mkKey("vocab",L,topic),back:"cards",title:topic});vocabHome();if(learn||!topicCards(L,topic).length)learnWords()}
+async function learnWords(){const{L,topic,k}=S,r=await ai("vocab",{level:L,topic,avoid:topicCards(L,topic).map(c=>c.word).join(", ")},$("sst"));
+ if(bad($("sst"),r,"words","exercises")||S.k!=k)return;
+ const c=cards();r.words.forEach(w=>c[w.word]=c[w.word]||{...w,level:L,topic,box:0,due:dayStr(1),t:Date.now()});localStorage.cards=JSON.stringify(c);
+ jot("vlesson",{title:topic,words:r.words.map(w=>w.word)});stats();drawVTopics();vocabHome();showEx(r.exercises);deck(r.words.map(w=>({...w,level:L,topic})),"learn","lesson")}
+$("vnew").onclick=learnWords;
+$("vprac").onclick=()=>deck(topicCards(S.L,S.topic),"write","review");
+$("rvw").onclick=()=>{const l=dueCards().slice(0,10);if(!l.length){$("st1").textContent="Nothing due. Try a new lesson!";return}
+ $("st1").textContent="";showStudy({kind:"review",k:"",back:"cards",title:"Review due words"});deck(l,"write","review")};
+$("sck").onclick=async()=>{const{kind,L,topic,k}=S;if(!k||!$("sex")._list)return;
+ if(!await gradeEx($("sex"),L,topic,$("sst2"),$("sfb"),k))return;
+ jot(kind=="grammar"?"gscore":"vscore",{title:`${kind=="grammar"?"Grammar":"Vocabulary"}: ${topic}`,s:$("sfb").textContent.split("\n")[0]||"done"});
+ if(kind=="grammar"){if(!S.counted){S.counted=1;bump("grammar")}
+  const[ok,tot]=$("sex")._score||[0,0],p=L+"|"+topic;
+  if(tot&&ok/tot>=0.6&&SYLL[L].includes(topic)&&!gdone()[p]){setDone(p,true,`${ok}/${tot}`);$("sst2").textContent="✓ You learned this topic!";levelUp(L)}}}
+$("snew").onclick=async()=>{const{kind,L,topic,k}=S;if(!k)return;
+ const r=await ai("exercises",{level:L,kind,topic,words:kind=="vocab"?topicCards(L,topic).map(c=>c.word).join(", "):"",missed:missedFor(k).slice(-5).map(m=>m.q+" -> "+m.answer).join(" | ")},$("sst2"));
+ if(bad($("sst2"),r,"exercises")||S.k!=k)return;showEx(r.exercises);
+ if(kind=="grammar"){const c=jget("lessons","{}");if(c[k]){c[k].exercises=r.exercises;localStorage.lessons=JSON.stringify(c)}}};
+
+// flashcards: learn all the words, then write each one. Progress is saved (next review after 1,2,4,8,16,32 days)
 const INT=[1,2,4,8,16,32];
 const srs=(w,good)=>{const c=cards(),x=c[w];if(!x)return;x.box=good?Math.min(x.box+1,5):0;if(good)delete x.skipped;x.due=dayStr(INT[x.box]);x.t=Date.now();localStorage.cards=JSON.stringify(c);stats()};
 const skipCard=w=>{const c=cards(),x=c[w];if(!x)return;x.skipped=1;x.box=0;x.due=dayStr(1);x.t=Date.now();localStorage.cards=JSON.stringify(c);stats()};
-let dk=[],di=0,dmode="learn",dscore=0,dsrc="",vl;
+let dk=[],di=0,dmode="learn",dscore=0,dsrc="";
 function deck(list,mode,src){dk=list;di=0;dmode=mode;dscore=0;dsrc=src;$("cd").classList.remove("hide");face()}
 function finish(){$("clabel").textContent="";$("cn").replaceChildren();
  $("cf").replaceChildren(el("div",`Done! Score: ${dscore}/${dk.length}. Progress saved ✓`,"big"),el("div","Missed words come back tomorrow. Correct ones come back later."));
- if(dsrc=="lesson"){bump("vocab");$("vc").classList.remove("hide")}}
+ if(dsrc=="lesson")bump("vocab")}
 function face(){const c=dk[di],cf=$("cf"),cn=$("cn"),last=di==dk.length-1;cf.replaceChildren();cn.replaceChildren();
  $("clabel").textContent=`${dmode=="learn"?"Learn":"Write the word"} ${di+1}/${dk.length}${c.type?" · "+c.type:""}`;
  if(dmode=="learn"){const r1=el("div","","row"),r2=el("div","","row"),nx=el("button",last?"Start writing ▶":"Next ▶"),pv=el("button","◀","sec");
   r1.append(el("span",[c.ipa,c.pos].filter(Boolean).join(" · ")),spk(c.word));r2.append(el("i","e.g. "+c.example),spk(c.example));
   cf.append(el("div",c.word,"big"),r1,el("b",c.vi),el("div",c.meaning||""),r2,el("small",c.note?"💡 "+c.note:""));
   pv.onclick=()=>{if(di){di--;face()}};nx.onclick=()=>{if(last){dmode="write";di=0;dscore=0}else di++;face()};cn.append(pv,nx);say(c.word);return}
- const rx=new RegExp(c.word.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"i"),inp=el("input"),res=el("div","","fb"),btn=el("button","Check");
+ const rx=new RegExp(c.word.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"),"i"),inp=el("input"),res=el("div","","fb"),btn=el("button","Check"),mk=mkKey("vocab",c.level||"",c.topic||""),mq="Meaning: "+c.vi;
  inp.className="w100";inp.placeholder="Write the English word or phrase";inp.autocomplete="off";
  cf.append(el("b",c.vi),el("div",c.meaning||""),el("div",rx.test(c.example)?c.example.replace(rx,"_____"):c.example),inp,res);const sk=el("button","Skip","sec");cn.append(btn,sk);inp.focus();
  let done=false;inp.onkeydown=e=>e.key=="Enter"&&btn.click();
- sk.onclick=()=>{if(done)return;done=true;skipCard(c.word);jot("wcheck",{w:c.word,ok:false,skip:1});res.textContent="Skipped. The answer is: "+c.word+" "+(c.ipa||"");res.style.color="#c33";say(c.word);bump("cards");btn.textContent=last?"Finish":"Next ▶";sk.remove()};
+ sk.onclick=()=>{if(done)return;done=true;skipCard(c.word);addMissed(mk,[{q:mq,yours:"(skipped)",answer:c.word}]);jot("wcheck",{w:c.word,ok:false,skip:1});res.textContent="Skipped. The answer is: "+c.word+" "+(c.ipa||"");res.style.color="#c33";say(c.word);bump("cards");btn.textContent=last?"Finish":"Next ▶";sk.remove()};
  btn.onclick=()=>{if(done)return last?finish():(di++,face());
   const v=inp.value.trim();if(!v)return;done=true;sk.remove();const w=norm(c.word),good=[w,w.replace(/^to /,"")].includes(norm(v));
   dscore+=good;res.textContent=(good?"✓ Correct! ":"✗ The answer is: ")+c.word+" "+(c.ipa||"");res.style.color=good?"#2a7":"#c33";
+  good?resolveMissed(mk,[mq]):addMissed(mk,[{q:mq,yours:v,answer:c.word}]);
   say(c.word);srs(c.word,good);bump("cards");jot("wcheck",{w:c.word,ok:!!good});btn.textContent=last?"Finish":"Next ▶";
   const s=el("input"),sb=el("button","Check my sentence","sec"),so=el("small"),sf=el("div","","fb"),r3=el("div","","row");s.className="w100";s.placeholder="Optional: write your own sentence with this word";
-  sb.onclick=async()=>{if(!s.value.trim())return;const r=await ai("sentence",{level:$("lv1").value,word:c.word,sentence:s.value},so);if(r)sf.textContent=r};
+  sb.onclick=async()=>{if(!s.value.trim())return;const r=await ai("sentence",{level:c.level||curLevel(),word:c.word,sentence:s.value},so);if(r)sf.textContent=r};
   r3.append(sb,so);cf.append(el("p","Now make your own sentence with this word:"),s,r3,sf)}}
-$("nx").onclick=async()=>{const r=await ai("vocab",{level:$("lv1").value,topic:$("vtopic").value,avoid:words().slice(-30).join(", "),...srcArgs()},$("st1"));
- if(bad($("st1"),r,"words","exercises"))return;vl=r;
- $("vt").textContent=r.title;$("vin").textContent=r.intro||"";$("vf").textContent="";$("vc").classList.add("hide");
- const c=cards(),lv=$("lv1").value;r.words.forEach(w=>c[w.word]=c[w.word]||{...w,level:lv,box:0,due:dayStr(1),t:Date.now()});
- localStorage.cards=JSON.stringify(c);jot("vlesson",{title:r.title,words:r.words.map(w=>w.word)});stats();mkEx($("ve"),r.exercises);deck(r.words,"learn","lesson")};
-$("rvw").onclick=()=>{const l=dueCards().slice(0,10);if(!l.length){$("st1").textContent="Nothing due. Try a new lesson!";return}
- $("st1").textContent="";$("vt").textContent="Review";$("vin").textContent="";$("vc").classList.add("hide");deck(l,"write","review")};
-$("vk").onclick=async()=>{if(await gradeEx($("ve"),$("lv1").value,vl.title,$("st1"),$("vf")))jot("vscore",{title:"Vocabulary: "+vl.title,s:$("vf").textContent.split("\n")[0]||"done"})};
 
-// grammar lesson: what it is, how to use it, structure, examples, watch out, at work, then practice
-const secs=(ct,pairs)=>ct.replaceChildren(...pairs.flatMap(([h,v])=>!v||!v.length?[]:[el("b",h),Array.isArray(v)?(u=>(v.forEach(x=>u.append(el("li",x))),u))(el("ul")):el("p",v)]));
-let lesson;
-$("gl").onclick=async()=>{const L=$("lv2").value,t=$("topic").value||nextTopic(L);$("topic").value=t;const r=await ai("grammar",{level:L,topic:t,...srcArgs()},$("st3"));if(bad($("st3"),r,"exercises"))return;lesson=r;r.t=t;r.L=L;r.path=SYLL[L].includes(t)?L+"|"+t:"";
- localStorage.gtitle=r.title;jot("glesson",{title:r.title});$("gt").textContent=r.title;$("gf").textContent="";
- secs($("gx"),[["What is it?",r.what],["How to use it",r.use],["Structure",r.structure],["Helpful hints",r.hints],["Examples",r.examples],["Watch out!",r.watch],["At work",r.business]]);
- mkEx($("ge"),r.exercises);$("gc").classList.remove("hide")};
-$("gk").onclick=async()=>{if(await gradeEx($("ge"),$("lv2").value,lesson.title,$("st3"),$("gf"))){jot("gscore",{title:"Grammar: "+lesson.title,s:$("gf").textContent.split("\n")[0]||"done"});if(!lesson.done){lesson.done=1;bump("grammar")}
- const[ok,tot]=$("ge")._score||[0,0],p=lesson.path;
- if(p&&tot&&ok/tot>=0.6&&!gdone()[p]){setDone(p,true,`${ok}/${tot}`);if($("topic").value==lesson.t)$("topic").value="";levelUp(lesson.L);drawPath()}}};
-
-// test
-$("tk").onclick=async()=>{const t=$("tp").value.trim();if(!t)return;
- const r=await ai("test",{level:$("lv3").value,text:t,words:$("tw").value,grammar:$("tg").value},$("st4"));if(r){$("tf").textContent=r;bump("test");jot("test",{fb:r.slice(0,1500)})}};
+// progress test, made from the learner's own data (words, grammar topics, mistakes)
+let ex;
+const learnedWords=()=>Object.values(cards()).sort((a,b)=>b.t-a.t).slice(0,30).map(c=>c.word);
+const learnedGrammar=()=>Object.entries(gdone()).sort((a,b)=>(b[1].d||"").localeCompare(a[1].d||"")).slice(0,8).map(([k])=>k.split("|")[1]);
+const drawTestInfo=()=>{const td=testDue();$("tinfo").textContent=`It will use your last ${learnedWords().length} words, ${learnedGrammar().length} grammar topics and your recent mistakes. New since your last test: ${td.nw} words, ${td.ng} grammar topics.`};
+$("tg").onclick=async()=>{const w=learnedWords(),g=learnedGrammar();
+ if(!w.length&&!g.length){$("st4").textContent="Learn some words or a grammar topic first, then come back.";return}
+ const r=await ai("exam",{level:$("lv3").value,words:w.join(", "),grammar:g.join("; "),missed:jget("missed","[]").slice(-8).map(m=>m.q+" -> "+m.answer).join(" | ")},$("st4"));
+ if(bad($("st4"),r,"exercises"))return;ex=r;$("tt").textContent=r.title||"Your test";mkEx($("tex"),r.exercises);
+ $("tpp").textContent=r.paragraph.prompt;$("tpu").textContent=r.paragraph.use.length?"Try to use: "+r.paragraph.use.join(", "):"";$("tp").value="";$("tf").textContent="";$("tc").classList.remove("hide")};
+$("tk").onclick=async()=>{if(!ex)return;const k=mkKey("test",$("lv3").value,"Progress test"),{ok,tot,wrong,right}=checkEx($("tex"));
+ resolveMissed(k,right.map(w=>w.q));addMissed(k,wrong);let fb=`Questions: ${ok}/${tot}`;$("tf").textContent=fb;
+ if(!ex.counted){ex.counted=1;bump("test");localStorage.testmark=JSON.stringify({d:dayStr(),w:Object.keys(cards()).length,g:Object.keys(gdone()).length});markTest()}
+ const t=$("tp").value.trim();
+ if(t){const r=await ai("test",{level:$("lv3").value,text:t,words:ex.paragraph.use.join(", "),grammar:learnedGrammar().join("; ")},$("st4"));if(r){fb+="\n\nParagraph:\n"+r;$("tf").textContent=fb}}
+ jot("test",{fb:fb.slice(0,1500)})};
 
 // YouTube IFrame API: one script, loaded when first needed; callbacks queue until it is ready
 const ytq=[];let ytOK=false;
@@ -424,13 +461,15 @@ $("pn").onclick=()=>step(1);$("pv").onclick=()=>step(-1);$("ff").onclick=()=>see
 $("vol").value=localStorage.vol||60;$("vol").oninput=()=>{localStorage.vol=$("vol").value;mpReady&&mp.setVolume(+$("vol").value)};
 $("mvid").onclick=()=>$("mpw").classList.toggle("show");
 // search results shown in the page
-async function search(){const q=$("ps").value.trim();if(!q)return;$("sst").textContent="Searching...";
- const r=await(await fetch("/search?q="+encodeURIComponent(q))).json();$("sst").textContent=r.error||(r.results.length?"":"No results.");
+async function search(){const q=$("ps").value.trim();if(!q)return;$("sst3").textContent="Searching...";
+ const r=await(await fetch("/search?q="+encodeURIComponent(q))).json();$("sst3").textContent=r.error||(r.results.length?"":"No results.");
  $("sr").replaceChildren(...(r.results||[]).map(v=>{const d=el("div","","row"),i=el("div"),p=el("button","▶"),a=el("button","+ List","sec"),im=el("img");
   im.src=`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`;im.width=120;i.className="grow";i.append(el("b",v.title),el("br"),el("small",v.channel));
   p.onclick=()=>play(v.id);a.onclick=()=>addList(v.id,v.title);d.append(im,i,p,a);return d}))}
 $("pg").onclick=search;$("ps").onkeydown=e=>e.key=="Enter"&&search();
-drawPl();loadBooks().then(ensurePlan);drawPath();
+
+// start
+drawPl();drawPath();drawVTopics();setInterval(tick,1000);tick();ensurePlan();
 synced=Object.keys(SP).length?JSON.stringify(snap()):""; // nothing on the server yet: the first sync uploads this browser's progress
 setInterval(syncUp,3000);addEventListener("pagehide",()=>{if(JSON.stringify(snap())!=synced)navigator.sendBeacon("/progress",JSON.stringify({data:snap()}))});
 </script>

@@ -5,9 +5,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 CFG_FILE, ENV_FILE, YT_FILE = (os.path.join(DIR, f) for f in ("config.json", ".env", ".ytkey"))
-BOOKS = os.path.join(DIR, "books")  # extracted book text, git-ignored (copyright)
 DATA = os.path.join(DIR, "data")  # one progress file per user, git-ignored
-PROGRESS = ("cards", "log", "journal", "plan", "course", "bk", "lv", "topics", "plist", "gdone", "profile", "gtitle")
+PROGRESS = ("cards", "log", "journal", "plan", "course", "lv", "plist", "gdone", "profile", "lessons", "missed", "testmark")
 HOST, PORT = os.environ.get("HOST", "127.0.0.1"), int(os.environ.get("PORT", 8000))
 AUTH = os.environ.get("APP_PASSWORD", "")  # cloud: set it. The browser then asks for a login; the login name picks the progress file
 LOCK = threading.Lock()
@@ -58,46 +57,17 @@ def parse_json(t, o, c):
     try: return json.loads(t[t.index(o):t.rindex(c) + 1])
     except ValueError: raise ValueError("The AI reply was not valid. Please try again.")
 
-# ---- books: PDF text is extracted in the browser and stored here as a list of page strings
-def book_path(name): return os.path.join(BOOKS, re.sub(r"[^\w .&-]", "_", name.strip())[:60] + ".json")
-
-def list_books():
-    os.makedirs(BOOKS, exist_ok=True)
-    return {"books": [{"name": f[:-5], "pages": len(json.load(open(os.path.join(BOOKS, f), encoding="utf-8")))}
-                      for f in sorted(os.listdir(BOOKS)) if f.endswith(".json")]}
-
-def save_book(d):
-    name, pages = str(d.get("name", "")).strip(), d.get("pages")
-    if not name or not isinstance(pages, list) or not 0 < len(pages) < 3000 or not all(isinstance(p, str) for p in pages):
-        raise ValueError("Bad book data.")
-    os.makedirs(BOOKS, exist_ok=True)
-    json.dump(pages, open(book_path(name), "w", encoding="utf-8"))
-    return os.path.basename(book_path(name))[:-5]  # the stored (sanitized) name
-
-def num(v, default):
-    try: return int(v or default)
-    except (TypeError, ValueError): raise ValueError("Bad page numbers.")
-
-def source(d):
-    """Prompt text about the student's book; includes a page excerpt when the book was uploaded."""
-    name = str(d.get("book", "")).strip()[:80]
-    if not name: return ""
-    out = f"The student studies from the book '{name}'. Match its level and style. "
-    p = book_path(name)
-    if os.path.exists(p) and d.get("from"):
-        pages, a = json.load(open(p, encoding="utf-8")), max(1, num(d.get("from"), 1))
-        b = max(a, num(d.get("to"), a))
-        out += f"Base this on the following text from the book (pages {a}-{b}):\n<<<\n{' '.join(pages[a - 1:b])[:3000]}\n>>>\n"
-    return out
-
 WORD_TYPES = "topic word, phrasal verb, prepositional phrase, word formation (a word made from another), word pattern (word + preposition)"
-EX_SPEC = ('"exercises":[8 items, at least 5 different types, the last one a "write" item. Types: '
-           '{"type":"choice","q":"sentence with ___","options":["a","b","c"],"answer":"b"} (2 options = circle the correct word; or True/False), '
-           '{"type":"gap","q":"sentence with ___ and the base word in (brackets), or a CAPITAL word to change","answer":["answer","other accepted answer"]}, '
-           '{"type":"order","answer":"the full correct sentence, 4-8 words"}, '
-           '{"type":"match","pairs":[["item","its match"],["item","its match"],["item","its match"]]}, '
-           '{"type":"error","q":"a sentence with one mistake","answer":["the corrected sentence"]}, '
-           '{"type":"write","q":"ask for one short sentence using something from the lesson"}]')
+
+def ex_spec(n, write=True):
+    """The exercise part of a JSON prompt: n typed items, at least 5 kinds."""
+    return (f'"exercises":[{n} items, at least 5 different types' + (', the last one a "write" item' if write else '') + '. Types: '
+            '{"type":"choice","q":"sentence with ___","options":["a","b","c"],"answer":"b"} (2 options = circle the correct word; or True/False), '
+            '{"type":"gap","q":"sentence with ___ and the base word in (brackets), or a CAPITAL word to change","answer":["answer","other accepted answer"]}, '
+            '{"type":"order","answer":"the full correct sentence, 4-8 words"}, '
+            '{"type":"match","pairs":[["item","its match"],["item","its match"],["item","its match"]]}, '
+            '{"type":"error","q":"a sentence with one mistake","answer":["the corrected sentence"]}'
+            + (', {"type":"write","q":"ask for one short sentence using something from the lesson"}' if write else '') + ']')
 
 def clean_ex(x):
     """Validate one AI-made exercise (the AI output is untrusted); return a trimmed dict or None."""
@@ -123,14 +93,21 @@ def clean_word(w):
     except AttributeError: return None
     return out if out["word"].strip() and out["vi"].strip() else None
 
+SKILLS = ("grammar", "vocab")
+INCOMPLETE = "The AI reply was incomplete. Please try again."
+
 def clean_lesson(r, need):
     ex = r.get("exercises")
     r["exercises"] = [e for e in map(clean_ex, ex if isinstance(ex, list) else []) if e]
-    if not r["exercises"] or any(not r.get(k) for k in need): raise ValueError("The AI reply was incomplete. Please try again.")
+    if not r["exercises"] or any(not r.get(k) for k in need): raise ValueError(INCOMPLETE)
     return r
 
-SKILLS = ("grammar", "vocab")
-INCOMPLETE = "The AI reply was incomplete. Please try again."
+def clean_exam(r):
+    r = clean_lesson(r, ())
+    ex, p = [e for e in r["exercises"] if e["type"] != "write"], r.get("paragraph")
+    if len(ex) < 5 or not isinstance(p, dict) or not str(p.get("prompt", "")).strip(): raise ValueError(INCOMPLETE)
+    use = p.get("use") if isinstance(p.get("use"), list) else []
+    return {"title": str(r.get("title", ""))[:100], "exercises": ex, "paragraph": {"prompt": str(p["prompt"])[:300], "use": [str(w)[:40] for w in use][:8]}}
 
 def clean_placement(r):
     out = []
@@ -144,11 +121,8 @@ def clean_placement(r):
 def clean_course(r):
     s = lambda v, n: str(v)[:n]
     lst = lambda k: [s(i, 100) for i in r[k]][:4] if isinstance(r.get(k), list) else []
-    units = []
-    for u in r.get("units") if isinstance(r.get("units"), list) else []:
-        try: x = {k: s(u.get(k, ""), 150) for k in ("grammar", "vocab", "practice", "writing")}
-        except AttributeError: continue
-        if x["grammar"].strip() and x["vocab"].strip(): units.append(x)
+    units = [{"practice": s(u["practice"], 150)} for u in (r.get("units") if isinstance(r.get("units"), list) else [])
+             if isinstance(u, dict) and str(u.get("practice", "")).strip()]
     if len(units) < 3: raise ValueError(INCOMPLETE)
     return {"summary": s(r.get("summary", ""), 400), "strengths": lst("strengths"), "weak": lst("weak"), "units": units[:12]}
 
@@ -159,20 +133,31 @@ def run_task(task, d):
     g = lambda k: str(d.get(k, ""))[:2000]  # cap input size (cost + abuse)
     def js(p, n, o, c): return parse_json(ask([{"role": "user", "content": p}], JSON_SYS, n), o, c)
     if task == "vocab":
-        r = js(f"CEFR level {lv}. {source(d)}Topic: {g('topic') or 'chosen from the text, or useful work/study words'}. "
-               f"Teach 8 useful English words, mixing these kinds: {WORD_TYPES}. Do not use: {g('avoid')}. Return JSON "
-               '{"title":"","intro":"1-2 simple sentences about the topic","words":[{"word":"","type":"one of the kinds","ipa":"/IPA/","pos":"noun/verb/phrase",'
+        r = js(f"CEFR level {lv}. Topic: {g('topic') or 'useful work and study words'}. "
+               f"Teach 8 useful English words for this topic, mixing these kinds: {WORD_TYPES}. Do not use: {g('avoid')}. Return JSON "
+               '{"title":"","words":[{"word":"","type":"one of the kinds","ipa":"/IPA/","pos":"noun/verb/phrase",'
                '"vi":"short Vietnamese meaning","meaning":"simple English meaning","example":"one short sentence that contains the word exactly as written",'
-               '"note":"short tip: collocation or common mistake"}],' + EX_SPEC + "}.", 2200, "{", "}")
+               '"note":"short tip: collocation or common mistake"}],' + ex_spec(8) + "}.", 2200, "{", "}")
         r["words"] = [w for w in map(clean_word, r.get("words") if isinstance(r.get("words"), list) else []) if w]
         return clean_lesson(r, ("title", "words"))
     if task == "grammar":
-        return clean_lesson(js(f"CEFR level {lv}. {source(d)}Topic: {g('topic') or 'chosen from the text, or common for this level'}. "
+        return clean_lesson(js(f"CEFR level {lv}. Topic: {g('topic') or 'common for this level'}. "
                "Teach ONE grammar point simply. Return JSON "
                '{"title":"","what":"what it is, 1-2 simple sentences","use":["2-3 short points: when to use it"],'
                '"structure":["1-3 patterns, like Subject + have/has + past participle"],"hints":["signal words or phrases that often go with it"],'
                '"examples":["3 short example sentences"],"watch":["2 common mistakes or tips"],"business":"one example sentence from a work situation",'
-               + EX_SPEC + "}.", 1800, "{", "}"), ("title",))
+               + ex_spec(8) + "}.", 1800, "{", "}"), ("title",))
+    if task == "exercises":
+        if d.get("kind") not in SKILLS: raise ValueError("Bad request")
+        what = f"the grammar point '{g('topic')}'" if d["kind"] == "grammar" else f"the topic '{g('topic')}' and these words: {g('words')}"
+        r = js(f"CEFR level {lv}. Make 8 NEW exercises for a student studying {what}. "
+               f"The student got these wrong before, so practise them again in new sentences: {g('missed')}. Return JSON {{" + ex_spec(8) + "}.", 1500, "{", "}")
+        return {"exercises": clean_lesson(r, ())["exercises"]}
+    if task == "exam":
+        return clean_exam(js(f"CEFR level {lv}. Make a progress test for a Vietnamese Business English student. Test ONLY what they studied. "
+               f"Vocabulary studied: {g('words')}. Grammar studied: {g('grammar')}. Mistakes they made before (test these again): {g('missed')}. Return JSON "
+               '{"title":"",' + ex_spec(10, False) + ',"paragraph":{"prompt":"one short writing task that needs 4-6 sentences, about work or study",'
+               '"use":["4-6 of the studied words"]}}.', 2400, "{", "}"))
     if task == "placement":
         return clean_placement(js("Make a placement test for a Vietnamese learner of English. 12 items: exactly 2 for each CEFR level A1, A2, B1, B2, C1, C2, "
             "in that order, each clearly at its level; mix grammar and vocabulary (work contexts are fine from B1). Return JSON "
@@ -181,23 +166,18 @@ def run_task(task, d):
             '{"level":"B2","skill":"vocab","type":"error","q":"sentence with one mistake","answer":["the corrected sentence"]}]} '
             "Use only these three types.", 1800, "{", "}"))
     if task == "course":
-        return clean_course(js(f"{source(d)}A placement test says the student's level is {lv}. Scores: {g('scores')}. Missed items: {g('missed')}. "
+        return clean_course(js(f"A placement test says the student's level is {lv}. Scores: {g('scores')}. Missed items: {g('missed')}. "
             f"Writing sample (may be empty): {g('text')}\n"
-            "Make a personal course of 8 daily units for this student. Start at their level, cover weak areas first, end slightly harder. Return JSON "
+            "Make a personal practice plan of 8 daily speaking/writing ideas for this student (role-plays and business emails). "
+            "Start at their level, aim at their weak areas, end slightly harder. Return JSON "
             '{"summary":"2 simple sentences about the student, in English","strengths":["2 short items"],"weak":["2-3 short items"],'
-            '"units":[{"grammar":"2-4 words, one grammar point","vocab":"2-4 words, a work/study topic",'
-            '"practice":"one short role-play or email idea","writing":"one short paragraph prompt"}]}.', 1500, "{", "}"))
-    if task == "plan":
-        return js(f"CEFR level {lv}. {source(d)}Plan today's English study for a Business English student. "
-                  f"Recent topics to avoid: {g('avoid')}. Return JSON "
-                  '{"vocab_topic":"2-4 words","grammar_topic":"2-4 words, one grammar point","practice":"one short role-play '
-                  'or business email idea","writing":"one short paragraph prompt"}.', 300, "{", "}")
+            '"units":[{"practice":"one short role-play or email idea"}]}.', 1200, "{", "}"))
     p = {"sentence": f"Level {lv}. The student must use the word '{g('word')}'. Their sentence: {g('sentence')}\n"
                      "Say if the word is used correctly. Give a corrected sentence and a one-line reason. Max 3 lines.",
          "grade": f"Lesson: {g('title')}\nExercises and student answers:\n{g('qa')}\n"
                   "For each: tick or cross, the correct answer, a one-line reason (for a writing item, give a corrected version). "
                   "End with the score, like 3/5.",
-         "test": f"Level {lv}. Student paragraph: {g('text')}\nVocabulary to use: {g('words')}\nGrammar to use: {g('grammar')}\n"
+         "test": f"Level {lv}. Student paragraph: {g('text')}\nVocabulary to use: {g('words')}\nGrammar studied: {g('grammar')}\n"
                  "Give: score out of 10; corrected paragraph; top 3 mistakes in simple words; which target words were used well."}[task]
     return ask([{"role": "user", "content": p}], max_tokens=600)
 
@@ -248,7 +228,7 @@ def save_progress(uid, d):
     return {"ok": True}
 
 POST = {"/chat": lambda d: {"reply": chat(d)}, "/ai": lambda d: {"result": run_task(d["task"], d)},
-        "/settings": lambda d: save_settings(d) or {"ok": True}, "/book": lambda d: {"name": save_book(d)}}
+        "/settings": lambda d: save_settings(d) or {"ok": True}}
 
 class H(BaseHTTPRequestHandler):
     def send(self, code, body, ctype="application/json"):
@@ -263,7 +243,7 @@ class H(BaseHTTPRequestHandler):
             self.send(502, {"error": "Network problem. Check your internet."})
     def body(self):
         n = int(self.headers["content-length"])
-        if n > 40_000_000: raise ValueError("File too big.")
+        if n > 6_000_000: raise ValueError("Request too big.")
         return json.loads(self.rfile.read(n))
     def user(self):
         """Who is asking: 'local' without a password; with APP_PASSWORD, the login name (None = not allowed)."""
@@ -279,7 +259,6 @@ class H(BaseHTTPRequestHandler):
         if not uid: return self.deny()
         u = urllib.parse.urlparse(self.path)
         if u.path == "/settings": self.reply(lambda: {**load_cfg(), "key_set": bool(get_key()), "yt_set": bool(get_ytkey())})
-        elif u.path == "/books": self.reply(list_books)
         elif u.path == "/search": self.reply(lambda: {"results": search(urllib.parse.parse_qs(u.query).get("q", [""])[0])})
         else:  # the saved progress is put into the page, so it is there before the page code runs ("<" escaped: no </script> tricks)
             page = open(os.path.join(DIR, "index.html"), encoding="utf-8").read()
