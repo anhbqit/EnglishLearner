@@ -11,5 +11,5 @@ Test: `python test_server.py`
 ## Progress and cloud
 - Progress (words, grammar path, activity, course) is saved on the server in `data/<user>.json` and also cached in the browser. The server copy wins when the page loads.
 - Run on a cloud host: set `HOST=0.0.0.0`, `PORT` (if the host gives one) and `APP_PASSWORD`. The app refuses to start on a public address without a password. The browser then asks for a login: any user name, that password. The user name picks the progress file.
-- Keep `data/`, `books/`, `.env` and `.ytkey` on a persistent disk. Use HTTPS (the host usually provides it).
+- Keep `data/`, `.env` and `.ytkey` on a persistent disk. Use HTTPS (the host usually provides it).
 - Not done yet for many users: separate passwords per user, separate API keys/limits per user, and a database instead of files.
