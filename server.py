@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 DIR = os.path.dirname(os.path.abspath(__file__))
 CFG_FILE, ENV_FILE, YT_FILE = (os.path.join(DIR, f) for f in ("config.json", ".env", ".ytkey"))
 DATA = os.path.join(DIR, "data")  # one progress file per user, git-ignored
-PROGRESS = ("cards", "log", "journal", "plan", "course", "lv", "plist", "gdone", "profile", "lessons", "missed", "testmark")
+PROGRESS = ("cards", "log", "journal", "plan", "course", "lv", "plist", "gdone", "profile", "lessons", "missed", "testmark", "sessions", "_t")  # _t: when the browser last changed something
 HOST, PORT = os.environ.get("HOST", "127.0.0.1"), int(os.environ.get("PORT", 8000))
 AUTH = os.environ.get("APP_PASSWORD", "")  # cloud: set it. The browser then asks for a login; the login name picks the progress file
 LOCK = threading.Lock()
@@ -133,8 +133,10 @@ def run_task(task, d):
     g = lambda k: str(d.get(k, ""))[:2000]  # cap input size (cost + abuse)
     def js(p, n, o, c): return parse_json(ask([{"role": "user", "content": p}], JSON_SYS, n), o, c)
     if task == "vocab":
+        try: n = max(3, min(12, int(d.get("count") or 8)))  # words in this lesson
+        except (TypeError, ValueError): n = 8
         r = js(f"CEFR level {lv}. Topic: {g('topic') or 'useful work and study words'}. "
-               f"Teach 8 useful English words for this topic, mixing these kinds: {WORD_TYPES}. Do not use: {g('avoid')}. Return JSON "
+               f"Teach {n} useful English words for this topic, mixing these kinds: {WORD_TYPES}. Do not use: {g('avoid')}. Return JSON "
                '{"title":"","words":[{"word":"","type":"one of the kinds","ipa":"/IPA/","pos":"noun/verb/phrase",'
                '"vi":"short Vietnamese meaning","meaning":"simple English meaning","example":"one short sentence that contains the word exactly as written",'
                '"note":"short tip: collocation or common mistake"}],' + ex_spec(8) + "}.", 2200, "{", "}")

@@ -34,6 +34,8 @@ try:
     assert r["title"] == "t" and len(r["words"]) == 1 and r["words"][0]["word"] == "agenda"
     assert [e["type"] for e in r["exercises"]] == ["choice", "gap", "order", "match", "error", "write"] and r["exercises"][1]["answer"] == ["x"]
     assert "Meetings" in seen[-1] and "old word" in seen[-1] and "8 items" in seen[-1]
+    for cnt, want in ((5, 5), ("x", 8), (99, 12), (None, 8)):
+        server.run_task("vocab", {"level": "B1", "topic": "x", "count": cnt}); assert f"Teach {want} useful" in seen[-1], cnt
     assert len(server.run_task("grammar", {"level": "A1", "topic": "Past perfect"})["exercises"]) == 6 and "Past perfect" in seen[-1]
     server.ask = fake(json.dumps({"title": "t", "words": [word], "exercises": [{"type": "nope"}]}))
     err(lambda: server.run_task("vocab", {"level": "A1"}), "incomplete")
@@ -102,7 +104,7 @@ try:
     page = lambda h={}: urllib.request.urlopen(urllib.request.Request(U + "/", headers=h)).read().decode()
     assert "__PROGRESS__" not in page() and "SERVER_PROGRESS={}" in page()
     post("/progress", {"data": {"cards": '{"a":1}', "log": "x</script>"}})
-    post("/progress", {"data": {"lv": "B1", "missed": "[]", "lessons": "{}", "testmark": "null"}})
+    post("/progress", {"data": {"lv": "B1", "missed": "[]", "lessons": "{}", "testmark": "null", "sessions": "{}", "_t": "123"}})
     p = page()
     assert "x</script>" not in p and "x\\u003c/script>" in p and '"lv": "B1"' in p and '"cards"' in p
     for bad in ({"evil": "x"}, {"cards": 5}, {"bk": "x"}): err(lambda: post("/progress", {"data": bad}), "Bad progress")
