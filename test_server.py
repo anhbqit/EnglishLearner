@@ -1,4 +1,4 @@
-import json, os, shutil, tempfile, threading, urllib.error, urllib.request
+import base64, json, os, shutil, tempfile, threading, urllib.error, urllib.request
 import server
 
 tmp = tempfile.mkdtemp(dir=server.DIR)  # temp config/keys/books: never touches the real ones
@@ -87,6 +87,26 @@ try:
     assert server.search("english") == [{"id": "abcdefghijk", "title": "Tom & Jerry", "channel": "C"}]
     urllib.request.urlopen = real
     os.remove(server.YT_FILE); err(lambda: get("/search?q=hi"), "YouTube API key")
+    # progress: saved per user on the server, put into the page, merged, validated; optional login
+    server.DATA = os.path.join(tmp, "data")
+    page = lambda h={}: urllib.request.urlopen(urllib.request.Request(U + "/", headers=h)).read().decode()
+    assert "__PROGRESS__" not in page() and "SERVER_PROGRESS={}" in page()
+    post("/progress", {"data": {"cards": '{"a":1}', "log": "x</script>"}})
+    post("/progress", {"data": {"lv": "B1"}})
+    p = page()
+    assert "x</script>" not in p and "x\\u003c/script>" in p and '"lv": "B1"' in p and '"cards"' in p
+    for bad in ({"evil": "x"}, {"cards": 5}): err(lambda: post("/progress", {"data": bad}), "Bad progress")
+    err(lambda: post("/progress", {}), "Bad progress")
+    server.AUTH = "pw"
+    try: page(); raise SystemExit("expected 401")
+    except urllib.error.HTTPError as e: assert e.code == 401
+    ok = {"Authorization": "Basic " + base64.b64encode(b"daisy:pw").decode()}
+    assert "SERVER_PROGRESS={}" in page(ok)  # her own, still empty
+    urllib.request.urlopen(urllib.request.Request(U + "/progress", json.dumps({"data": {"lv": "A2"}}).encode(), ok))
+    assert os.path.exists(os.path.join(server.DATA, "daisy.json")) and '"lv": "A2"' in page(ok) and '"lv": "B1"' not in page(ok)
+    try: page({"Authorization": "Basic " + base64.b64encode(b"daisy:bad").decode()}); raise SystemExit("expected 401")
+    except urllib.error.HTTPError as e: assert e.code == 401
+    server.AUTH = ""
     print("all ok")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)

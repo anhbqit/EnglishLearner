@@ -3,3 +3,4 @@
 books/
 *.tmp*
 __pycache__
+data/

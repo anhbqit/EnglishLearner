@@ -1,11 +1,16 @@
 """English Learner web. Stdlib only. Run: python server.py -> http://127.0.0.1:8000
 Provider "anthropic", or "openai" (any OpenAI-compatible: Gemini, Groq, OpenRouter)."""
-import html, json, os, re, threading, time, urllib.error, urllib.parse, urllib.request
+import base64, hmac, html, json, os, re, threading, time, urllib.error, urllib.parse, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 CFG_FILE, ENV_FILE, YT_FILE = (os.path.join(DIR, f) for f in ("config.json", ".env", ".ytkey"))
 BOOKS = os.path.join(DIR, "books")  # extracted book text, git-ignored (copyright)
+DATA = os.path.join(DIR, "data")  # one progress file per user, git-ignored
+PROGRESS = ("cards", "log", "journal", "plan", "course", "bk", "lv", "topics", "plist", "gdone", "profile", "gtitle")
+HOST, PORT = os.environ.get("HOST", "127.0.0.1"), int(os.environ.get("PORT", 8000))
+AUTH = os.environ.get("APP_PASSWORD", "")  # cloud: set it. The browser then asks for a login; the login name picks the progress file
+LOCK = threading.Lock()
 KEYS = ("provider", "model", "base_url", "history_turns", "max_tokens")
 LEVELS = ("A1", "A2", "B1", "B2", "C1", "C2")
 SYSTEM = ("You are a friendly English tutor for a first-year Business English student. "
@@ -224,6 +229,24 @@ def save_settings(d):
     for field, path in (("api_key", ENV_FILE), ("yt_key", YT_FILE)):
         if str(d.get(field, "")).strip(): open(path, "w").write(d[field].strip())
 
+def progress_file(uid): return os.path.join(DATA, re.sub(r"\W", "_", uid)[:40] + ".json")
+
+def load_progress(uid):
+    try: return json.load(open(progress_file(uid), encoding="utf-8"))
+    except (OSError, ValueError): return {}
+
+def save_progress(uid, d):
+    """shortcut: one JSON file per user, last write wins; move to a database (same two functions) when many users or devices."""
+    data = d.get("data")
+    if (not isinstance(data, dict) or not all(k in PROGRESS and isinstance(v, str) for k, v in data.items())
+            or sum(map(len, data.values())) > 5_000_000): raise ValueError("Bad progress data.")
+    with LOCK:
+        os.makedirs(DATA, exist_ok=True)
+        tmp = progress_file(uid) + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f: json.dump({**load_progress(uid), **data}, f)
+        os.replace(tmp, progress_file(uid))  # atomic: a crash never leaves a half-written file
+    return {"ok": True}
+
 POST = {"/chat": lambda d: {"reply": chat(d)}, "/ai": lambda d: {"result": run_task(d["task"], d)},
         "/settings": lambda d: save_settings(d) or {"ok": True}, "/book": lambda d: {"name": save_book(d)}}
 
@@ -242,13 +265,29 @@ class H(BaseHTTPRequestHandler):
         n = int(self.headers["content-length"])
         if n > 40_000_000: raise ValueError("File too big.")
         return json.loads(self.rfile.read(n))
+    def user(self):
+        """Who is asking: 'local' without a password; with APP_PASSWORD, the login name (None = not allowed)."""
+        if not AUTH: return "local"
+        try: u, _, p = base64.b64decode(self.headers.get("authorization", "")[6:]).decode().partition(":")
+        except ValueError: return None
+        return re.sub(r"\W", "_", u)[:40] if u and hmac.compare_digest(p.encode(), AUTH.encode()) else None
+    def deny(self):
+        self.send_response(401); self.send_header("www-authenticate", 'Basic realm="English Learner"')
+        self.send_header("content-length", "0"); self.end_headers()
     def do_GET(self):
+        uid = self.user()
+        if not uid: return self.deny()
         u = urllib.parse.urlparse(self.path)
         if u.path == "/settings": self.reply(lambda: {**load_cfg(), "key_set": bool(get_key()), "yt_set": bool(get_ytkey())})
         elif u.path == "/books": self.reply(list_books)
         elif u.path == "/search": self.reply(lambda: {"results": search(urllib.parse.parse_qs(u.query).get("q", [""])[0])})
-        else: self.send(200, open(os.path.join(DIR, "index.html"), "rb").read(), "text/html; charset=utf-8")
+        else:  # the saved progress is put into the page, so it is there before the page code runs ("<" escaped: no </script> tricks)
+            page = open(os.path.join(DIR, "index.html"), encoding="utf-8").read()
+            self.send(200, page.replace("__PROGRESS__", json.dumps(load_progress(uid)).replace("<", "\\u003c")).encode(), "text/html; charset=utf-8")
     def do_POST(self):
+        uid = self.user()
+        if not uid: return self.deny()
+        if self.path == "/progress": return self.reply(lambda: save_progress(uid, self.body()))
         fn = POST.get(self.path)
         if fn: self.reply(lambda: fn(self.body()))
         else: self.send(404, {"error": "not found"})
@@ -262,6 +301,8 @@ def watch():
         if os.path.getmtime(f) != t: os._exit(3)
 
 if __name__ == "__main__":
+    if HOST not in ("127.0.0.1", "localhost") and not AUTH:
+        raise SystemExit("Set APP_PASSWORD before exposing the app: anyone could change your API key and spend your money.")
     threading.Thread(target=watch, daemon=True).start()
-    print("Open http://127.0.0.1:8000  (Ctrl+C to stop)")
-    ThreadingHTTPServer(("127.0.0.1", 8000), H).serve_forever()  # localhost only
+    print(f"Open http://{HOST}:{PORT}  (Ctrl+C to stop)")
+    ThreadingHTTPServer((HOST, PORT), H).serve_forever()
