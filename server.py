@@ -1,6 +1,6 @@
 """English Learner web. Stdlib only. Run: python server.py -> http://127.0.0.1:8000
 Provider "anthropic", or "openai" (any OpenAI-compatible: Gemini, Groq, OpenRouter)."""
-import html, json, os, re, urllib.error, urllib.parse, urllib.request
+import html, json, os, re, threading, time, urllib.error, urllib.parse, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 DIR = os.path.dirname(os.path.abspath(__file__))
@@ -217,6 +217,14 @@ class H(BaseHTTPRequestHandler):
         else: self.send(404, {"error": "not found"})
     def log_message(self, *a): pass  # keep the console free of request details
 
+def watch():
+    """Dev convenience: exit with code 3 when server.py changes, so start.bat restarts it. index.html needs no restart."""
+    f = os.path.join(DIR, "server.py"); t = os.path.getmtime(f)
+    while True:
+        time.sleep(1)
+        if os.path.getmtime(f) != t: os._exit(3)
+
 if __name__ == "__main__":
+    threading.Thread(target=watch, daemon=True).start()
     print("Open http://127.0.0.1:8000  (Ctrl+C to stop)")
     ThreadingHTTPServer(("127.0.0.1", 8000), H).serve_forever()  # localhost only
