@@ -34,6 +34,7 @@ try:
     assert r["title"] == "t" and len(r["words"]) == 1 and r["words"][0]["word"] == "agenda"
     assert [e["type"] for e in r["exercises"]] == ["choice", "gap", "order", "match", "error", "write"] and r["exercises"][1]["answer"] == ["x"]
     assert "Meetings" in seen[-1] and "old word" in seen[-1] and "10 items" in seen[-1] and "exactly ONE correct answer" in seen[-1]
+    server.run_task("vocab", {"level": "B1", "topic": "x", "avoid": "w" * 9000}); assert "w" * 8000 in seen[-1] and "w" * 8001 not in seen[-1]
     for per, want in ((5, 5), ("x", 6), (99, 8), (None, 6), (1, 2)):
         server.run_task("vocab", {"level": "B1", "topic": "x", "per": per}); assert f"{5 * want} useful English words" in seen[-1] and f"exactly {want} words each" in seen[-1], per
     kinds = ["Phrasal verbs", "prepositional phrases", "Word formation", "word patterns", "weird", ""]

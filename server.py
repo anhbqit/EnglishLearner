@@ -143,7 +143,7 @@ def run_task(task, d):
         except (TypeError, ValueError): per = 6
         r = js(f"CEFR level {lv}. Topic: {g('topic') or 'useful work and study words'}. "
                f"Teach {5 * per} useful English words for this topic in 5 groups of exactly {per} words each, in this order: {GROUP_HELP}. "
-               f"Do not use: {g('avoid')}. Return JSON "
+               f"Do not use any of these words (the student knows them already): {str(d.get('avoid', ''))[:8000]}. Return JSON "
                '{"title":"","words":[{"word":"","type":"exactly one of: topic word, phrasal verb, prepositional phrase, word formation, word pattern","ipa":"/IPA/","pos":"noun/verb/phrase",'
                '"vi":"short Vietnamese meaning","meaning":"simple English meaning","example":"one short sentence that contains the word exactly as written",'
                '"note":"short tip: collocation or common mistake"}],' + ex_spec(10) + "}.", 4000, "{", "}")

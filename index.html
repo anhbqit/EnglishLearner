@@ -70,7 +70,7 @@ small,a{color:#777}
 <div class=row><select class=lv id=lv1></select><select id=acc><option value=en-US>American voice<option value=en-GB>British voice</select></div>
 <small>Choose a topic. The number shows how many words you have learned in it. Every time you open a topic, the AI writes new words, so a topic never runs out.</small>
 <div class=row><select id=vtp class=grow></select><select id=vsz title="Words in each of the 5 groups"><option value=4>4 words per group<option value=6>6 words per group<option value=8>8 words per group</select><button id=vgo>Learn new words</button></div>
-<details id=vlw><summary id=vlws></summary><div id=vlwl></div></details>
+<details id=vlw><summary id=vlws></summary><input id=vsr class=w100 placeholder="Search all my learned words (English or Vietnamese)" autocomplete=off><div id=vlwl></div></details>
 <div class=row><button id=rvw class=sec>Review due words</button><small id=cst></small></div><small id=st1></small></section>
 
 <section class=tab id=grammar>
@@ -347,8 +347,13 @@ function drawPath(){const L=$("lv2").value,T=SYLL[L]||[],g=gdone(),M=jget("misse
 function drawVTopics(){const L=$("lv1").value,sel=$("vtp"),keep=sel.value;
  sel.replaceChildren(...(VT[L]||[]).map(t=>{const n=topicCards(L,t).length;return new Option(`${t} — ${n} word${n==1?"":"s"} learned`,t)}));
  sel.value=VT[L].includes(keep)?keep:nextVTopic(L)||VT[L][0];updateGo();drawLearned()}
-function drawLearned(){const L=$("lv1").value,t=$("vtp").value,cs=topicCards(L,t).sort((a,b)=>b.t-a.t);$("vlws").textContent=`Words I learned in this topic: ${cs.length}`;
- $("vlwl").replaceChildren(...cs.map(c=>el("div",`${c.word} – ${c.vi}`)))}
+const fold=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/đ/g,"d"); // search ignores capitals and Vietnamese accents
+function drawLearned(){const L=$("lv1").value,t=$("vtp").value,q=fold($("vsr").value.trim()),all=Object.values(cards()).sort((a,b)=>b.t-a.t),
+ mine=all.filter(c=>c.level==L&&c.topic==t),list=q?all.filter(c=>fold([c.word,c.vi,c.meaning].filter(Boolean).join(" ")).includes(q)):mine;
+ $("vlws").textContent=q?`Search results: ${list.length} of ${all.length} learned words`:`Words I learned in this topic: ${mine.length} · in total: ${all.length}`;
+ $("vlwl").replaceChildren(...list.slice(0,200).map(c=>el("div",`${c.word} – ${c.vi}`+(q&&c.topic?` · ${c.topic} (${c.level})`:""))),...(list.length>200?[el("small",`+${list.length-200} more. Type more letters to narrow it down.`)]:[]));
+ if(q)$("vlw").open=true}
+$("vsr").oninput=drawLearned;
 $("vgo").onclick=()=>openVocab($("vtp").value,$("lv1").value,true); // opening a topic = a new lesson with new words (an unfinished lesson is continued)
 $("vtp").onchange=()=>{updateGo();drawLearned()};
 
@@ -414,12 +419,25 @@ function startFlash(){const s=S.sess,{L,topic}=S,c=cards();
  s.words.forEach(w=>c[w.word]=c[w.word]||{...w,level:L,topic,box:0,due:dayStr(1),t:Date.now()});localStorage.cards=JSON.stringify(c);
  jot("vlesson",{title:topic,words:s.words.map(w=>w.word)});stats();drawVTopics();vocabTitle();
  s.step="flash";$("vlist").classList.add("hide");deck(s.words,"lesson");$("study").scrollTop=0}
-async function learnWords(){const{L,topic,k}=S,avoid=topicCards(L,topic).sort((a,b)=>b.t-a.t).map(c=>c.word).join(", "); // newest first: the server cuts long lists at the end
- const r=await ai("vocab",{level:L,topic,per:perGroup(),avoid},$("sst"));
- if(bad($("sst"),r,"words","exercises")||S.k!=k)return;
- const known=new Set(Object.keys(cards()).map(w=>w.toLowerCase())),fresh=r.words.filter(w=>!known.has(w.word.toLowerCase())); // the AI sometimes repeats a word you already know
- if(fresh.length<3){$("sst").textContent="The AI gave words you already know. Please try again.";return}
- S.sess={step:"list",words:fresh.map(w=>({...w,level:L,topic})),exercises:r.exercises,answers:[],checked:false,fb:"",di:0,dscore:0};
+// A lesson never contains a word you already know: the AI is told the words (this topic first, then all others, newest first),
+// and any repeat is removed here. If too many repeats are removed, the AI is asked again (up to 3 tries) and the new words are merged.
+const wkey=w=>norm(w).replace(/^to /,"");
+async function learnWords(){const{L,topic,k}=S,per=perGroup(),known=new Set(Object.keys(cards()).map(wkey)),got={},rejected=[],out=$("sst");let ex,n=0;
+ const mine=topicCards(L,topic).sort((a,b)=>b.t-a.t).map(c=>c.word),others=Object.values(cards()).filter(c=>!(c.level==L&&c.topic==topic)).sort((a,b)=>b.t-a.t).map(c=>c.word);
+ for(let i=0;i<3;i++){
+  const r=await ai("vocab",{level:L,topic,per,avoid:[...rejected,...mine,...others].join(", ")},out);
+  if(S.k!=k)return;
+  if(bad(out,r,"words","exercises")){if(n)break;return}
+  ex=ex||r.exercises;
+  r.words.forEach(w=>{const g=GK.some(x=>x[0]==w.type)?w.type:"topic word",key=wkey(w.word);
+   if(known.has(key)){rejected.push(w.word);return}
+   if((got[g]=got[g]||[]).length>=per)return;known.add(key);got[g].push(w);n++});
+  if(n>=Math.ceil(5*per*0.8))break;
+  if(i<2)out.textContent="Some words were repeats. Asking the AI again..."}
+ const fresh=GK.flatMap(([t])=>got[t]||[]);
+ if(fresh.length<3){out.textContent="The AI keeps giving words you already know. Please try again.";return}
+ out.textContent="";
+ S.sess={step:"list",words:fresh.map(w=>({...w,level:L,topic})),exercises:ex,answers:[],checked:false,fb:"",di:0,dscore:0};
  persist();showList()}
 $("vnew").onclick=learnWords;
 $("vprac").onclick=()=>deck(topicCards(S.L,S.topic),"review");
