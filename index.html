@@ -18,7 +18,7 @@ textarea{width:100%;box-sizing:border-box;min-height:120px}#t{min-height:0;flex:
 .card{background:#fff;border:1px solid #eadde3;border-radius:14px;padding:16px;margin:10px 0}
 .big{font-size:28px;font-weight:700}.h2{font-size:20px;font-weight:700}.fb{white-space:pre-wrap;margin-top:8px}.row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center}
 .hide{display:none}.ex{margin:8px 0}.ex input,.ex select{width:100%;box-sizing:border-box}.w100{width:100%;box-sizing:border-box}
-.row img{border-radius:8px}#rv p,#as p,#aw p{white-space:pre-wrap}.hm{display:grid;grid-template-rows:repeat(7,13px);grid-auto-flow:column;grid-auto-columns:13px;gap:3px;overflow-x:auto;padding:6px 0}.cell{width:13px;height:13px;border-radius:3px;cursor:pointer}.h0{background:#eadde3}.h1{background:#f7c8dc}.h2c{background:#f19bc0}.h3{background:#e0679a}.h4{background:#b8326f}
+.row img{border-radius:8px}#rv p,#as p,#aw p{white-space:pre-wrap}.hm{flex-shrink:0;display:grid;grid-template-rows:repeat(7,13px);grid-auto-flow:column;grid-auto-columns:13px;gap:3px;overflow-x:auto;padding:6px 0}.tip{position:fixed;z-index:99;background:#333;color:#fff;padding:4px 8px;border-radius:6px;font-size:12px;pointer-events:none;white-space:nowrap}.cell{width:13px;height:13px;border-radius:3px;cursor:pointer}.h0{background:#eadde3}.h1{background:#f7c8dc}.h2c{background:#f19bc0}.h3{background:#e0679a}.h4{background:#b8326f}
 #clock{font-size:20px;font-weight:700;margin:8px 0}.done{opacity:.55;text-decoration:line-through}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,103,154,.55)}50%{box-shadow:0 0 0 10px rgba(224,103,154,0)}}
 .alert{background:linear-gradient(90deg,#ffe3ef,#fff3c4);border:2px solid #e0679a;font-size:18px;animation:pulse 1.6s infinite}
@@ -328,7 +328,7 @@ function drawAccount(){const si=streakInfo(),act=d=>actOf(si.L,d),days=si.days,L
  $("pname").value=profile().name||"";$("pgoal").value=goal();$("pron").checked=!!profile().ron;$("prt").value=profile().rtime||"19:00";$("sync").textContent=syncMsg||"Progress is saved to the server automatically.";
  secs($("as"),[["Learning",[`Days learning: ${days.length}${days.length?` (since ${days[0]})`:""}`,`Current streak: ${si.cur} day(s) · Longest streak: ${si.best} day(s)`,`Activities in total: ${days.reduce((a,d)=>a+act(d),0)}`]]]);
  const dow=(new Date().getDay()+6)%7,hm=$("ah");hm.replaceChildren(); // 20 weeks, Monday first; one square per day
- for(let k=19*7+dow;k>=0;k--){const d=dayStr(-k),n=act(d),c=el("div","","cell "+(n?n<5?"h1":n<10?"h2c":n<20?"h3":"h4":"h0"));c.title=`${d}: ${n} activities`;c.onclick=()=>{$("rd").value=d;go("review")};hm.append(c)}
+ for(let k=19*7+dow;k>=0;k--){const d=dayStr(-k),n=act(d),c=el("div","","cell "+(n?n<5?"h1":n<10?"h2c":n<20?"h3":"h4":"h0"));c.dataset.tip=`${new Date(d+"T00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"})} · ${n} ${n==1?"activity":"activities"}`;c.onclick=()=>{$("rd").value=d;go("review")};hm.append(c)}
  const cs=Object.values(cards()),rem=cs.filter(c=>c.box>=3),skp=cs.filter(c=>c.skipped),g=gdone();
  secs($("aw"),[["Words",[`Learnt: ${cs.length}`,`Remembered (written correctly 3 times in a row): ${rem.length}`,`Still learning: ${cs.length-rem.length-skp.length}`,`Skipped: ${skp.length}`]],
   ["Remembered words",rem.map(c=>c.word).join(", ")],["Skipped words (they come back tomorrow)",skp.map(c=>c.word).join(", ")],
@@ -363,6 +363,10 @@ const csvCell=v=>{v=String(v??"");if(/^[=+\-@]/.test(v))v="'"+v;return'"'+v.repl
 $("bcsv").onclick=()=>{const rows=[["word","type","ipa","vietnamese","meaning","example","topic","level","status","next review"]];
  Object.values(cards()).sort((a,b)=>a.word.localeCompare(b.word)).forEach(c=>rows.push([c.word,c.type,c.ipa,c.vi,c.meaning,c.example,c.topic,c.level,WSTAT(c)[0],c.due]));
  download("english-learner-words.csv","\ufeff"+rows.map(r=>r.map(csvCell).join(",")).join("\r\n"),"text/csv;charset=utf-8");$("bmsg").textContent=`Exported ${rows.length-1} words.`};
+// instant tooltip for the activity squares (the browser's own title tooltip is slow and easy to miss)
+const tip=el("div","","tip hide");document.body.append(tip);
+$("ah").onmouseover=e=>{const t=e.target.dataset&&e.target.dataset.tip;if(!t)return;tip.textContent=t;tip.classList.remove("hide");const r=e.target.getBoundingClientRect();tip.style.top=r.bottom+6+"px";tip.style.left=Math.max(4,Math.min(r.left-20,innerWidth-tip.offsetWidth-4))+"px"};
+$("ah").onmouseleave=()=>tip.classList.add("hide");
 // cost meter: the server counts tokens; the page shows the estimate
 let usage=null;
 async function refreshUsage(){try{usage=await(await fetch("/usage")).json()}catch(e){return}
