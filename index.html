@@ -350,7 +350,7 @@ function download(name,text,type){const a=el("a");a.href=URL.createObjectURL(new
 $("bdl").onclick=()=>{persist();saveExam();download(`english-learner-progress-${dayStr()}.json`,JSON.stringify({app:"english-learner",v:2,saved:new Date().toISOString(),data:snap()}),"application/json");$("bmsg").textContent="Downloaded. Keep the file somewhere safe."};
 async function restoreText(text){let o,d;
  try{o=JSON.parse(text);d=o&&o.data;if(o.app!="english-learner"||!d||typeof d!="object"||Array.isArray(d))throw 0;
-  const keys=Object.keys(d);if(!keys.length||keys.some(k=>!SYNC.includes(k)||typeof d[k]!="string"))throw 0;keys.forEach(k=>JSON.parse(d[k]))}
+  const keys=Object.keys(d);if(!keys.length||keys.some(k=>!SYNC.includes(k)||typeof d[k]!="string"))throw 0;keys.forEach(k=>{if(k=="lv"){if(!LV.includes(d[k]))throw 0}else JSON.parse(d[k])})} // lv is plain text (e.g. B1), every other key is JSON
  catch(e){$("bmsg").textContent="That file is not a valid English Learner backup.";return false}
  if(!confirm(`Replace your current progress with this backup (saved ${String(o.saved||"").slice(0,10)})? Your current progress will be lost. Tip: download a backup of it first.`))return false;
  SYNC.forEach(k=>delete localStorage[k]);Object.keys(d).forEach(k=>localStorage[k]=d[k]);localStorage._t=Date.now();
