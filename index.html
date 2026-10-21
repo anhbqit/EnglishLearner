@@ -68,8 +68,9 @@ small,a{color:#777}
 
 <section class=tab id=cards>
 <div class=row><select class=lv id=lv1></select><select id=acc><option value=en-US>American voice<option value=en-GB>British voice</select></div>
-<small>Choose a topic. The number shows how many words you learned out of 50.</small>
-<div class=row><select id=vtp class=grow></select><select id=vsz title="Words in each of the 5 groups"><option value=4>4 words per group<option value=6>6 words per group<option value=8>8 words per group</select><button id=vgo>Study</button></div>
+<small>Choose a topic. The number shows how many words you have learned in it. Every time you open a topic, the AI writes new words, so a topic never runs out.</small>
+<div class=row><select id=vtp class=grow></select><select id=vsz title="Words in each of the 5 groups"><option value=4>4 words per group<option value=6>6 words per group<option value=8>8 words per group</select><button id=vgo>Learn new words</button></div>
+<details id=vlw><summary id=vlws></summary><div id=vlwl></div></details>
 <div class=row><button id=rvw class=sec>Review due words</button><small id=cst></small></div><small id=st1></small></section>
 
 <section class=tab id=grammar>
@@ -172,10 +173,9 @@ B1:["Work and careers","Office life","Travel problems","News and media","Crime a
 B2:["Business meetings","Marketing and advertising","Money and banking","Management and leadership","Recruitment and interviews","Trade and globalisation","Science and innovation","Politics and society","Lifestyle and wellbeing","Arts and culture","Justice and crime","Behaviour and psychology","Communication at work"],
 C1:["Negotiation and deals","Company strategy","Economics and markets","Law and regulation","Ethics and responsibility","Research and academic life","The influence of the media","Sustainability","Innovation and new technology","Human resources","Diplomacy and international relations"],
 C2:["Abstract ideas and philosophy","Literature and rhetoric","The global economy","Law and governance","Science and ethics","Idioms and figurative language","Formal and academic language","Leading change","Culture and identity"]};
-const VPT=50;
 const nextTopic=L=>(SYLL[L]||[]).find(t=>!gdone()[L+"|"+t])||"";
 const topicCards=(L,t)=>Object.values(cards()).filter(c=>c.level==L&&c.topic==t);
-const nextVTopic=L=>(VT[L]||[]).find(t=>topicCards(L,t).length<VPT)||"";
+const nextVTopic=L=>(VT[L]||[]).reduce((best,t)=>!best||topicCards(L,t).length<topicCards(L,best).length?t:best,""); // the topic with the fewest words so far (a new one first)
 const mkKey=(kind,L,topic)=>`${kind}|${L}|${topic}`;
 const missedFor=k=>jget("missed","[]").filter(m=>m.k==k);
 function addMissed(k,wrong){if(!wrong.length)return;const M=jget("missed","[]"),d=dayStr();
@@ -202,7 +202,7 @@ const markTest=()=>document.querySelector("[data-t=test]").classList.toggle("due
 // today: missions. Vocabulary and grammar topics are the next ones on their paths; practice ideas come from your plan
 const DEF="Role-play a work situation or write a business email";
 const missions=P=>{const n=Math.min(P.due||0,10),L=P.L||curLevel();return[
- {k:"vocab",name:"Vocabulary lesson",what:P.vocab_topic?`${P.vocab_topic}: learn 8 new words`:"You finished every topic at this level. Choose a higher level.",goal:1,tab:"cards",run:()=>P.vocab_topic&&(openVocab(P.vocab_topic,L,true),1)},
+ {k:"vocab",name:"Vocabulary lesson",what:P.vocab_topic?`${P.vocab_topic}: learn new words`:"No topics at this level.",goal:1,tab:"cards",run:()=>P.vocab_topic&&(openVocab(P.vocab_topic,L,true),1)},
  ...(n?[{k:"cards",name:"Review cards",what:`Review ${n} saved words`,goal:n,tab:"cards",run:()=>($("rvw").click(),1)}]:[]),
  {k:"grammar",name:"Grammar lesson",what:P.grammar_topic||"You finished every grammar topic at this level. Choose a higher level.",goal:1,tab:"grammar",run:()=>P.grammar_topic&&(openGrammar(P.grammar_topic,L),1)},
  {k:"chat",name:"Speaking & writing",what:P.practice||DEF,goal:3,tab:"chat"},
@@ -259,7 +259,7 @@ function drawAccount(){const L=jget("log","{}"),act=d=>Object.values(L[d]||{}).r
  const cs=Object.values(cards()),rem=cs.filter(c=>c.box>=3),skp=cs.filter(c=>c.skipped),g=gdone();
  secs($("aw"),[["Words",[`Learnt: ${cs.length}`,`Remembered (written correctly 3 times in a row): ${rem.length}`,`Still learning: ${cs.length-rem.length-skp.length}`,`Skipped: ${skp.length}`]],
   ["Remembered words",rem.map(c=>c.word).join(", ")],["Skipped words (they come back tomorrow)",skp.map(c=>c.word).join(", ")],
-  ["Vocabulary topics",Object.keys(VT).map(L=>`${L}: ${VT[L].filter(t=>topicCards(L,t).length>=VPT).length}/${VT[L].length} topics complete`)],
+  ["Vocabulary topics",Object.keys(VT).map(L=>`${L}: ${VT[L].filter(t=>topicCards(L,t).length).length}/${VT[L].length} topics started · ${VT[L].reduce((a,t)=>a+topicCards(L,t).length,0)} words`)],
   ["Grammar path",Object.keys(SYLL).map(L=>`${L}: ${SYLL[L].filter(t=>g[L+"|"+t]).length}/${SYLL[L].length} topics`)]])}
 $("pname").onchange=()=>{localStorage.profile=JSON.stringify({name:$("pname").value.trim().slice(0,30)});today()};
 
@@ -345,9 +345,12 @@ function drawPath(){const L=$("lv2").value,T=SYLL[L]||[],g=gdone(),M=jget("misse
   r.append(el("span",`${g[k]?"✓":"○"} ${t}${g[k]&&g[k].s!="manual"?` (${g[k].s})`:""}${n?` · ${n} missed`:""}`,"grow"),s,m);return r}))}
 // vocabulary tab: topics of the chosen level with learned words / 24
 function drawVTopics(){const L=$("lv1").value,sel=$("vtp"),keep=sel.value;
- sel.replaceChildren(...(VT[L]||[]).map(t=>{const n=topicCards(L,t).length;return new Option(`${n>=VPT?"✓ ":""}${t} — ${n}/${VPT}`,t)}));
- sel.value=VT[L].includes(keep)?keep:nextVTopic(L)||VT[L][0];updateGo()}
-$("vgo").onclick=()=>openVocab($("vtp").value,$("lv1").value);$("vtp").onchange=()=>updateGo();
+ sel.replaceChildren(...(VT[L]||[]).map(t=>{const n=topicCards(L,t).length;return new Option(`${t} — ${n} word${n==1?"":"s"} learned`,t)}));
+ sel.value=VT[L].includes(keep)?keep:nextVTopic(L)||VT[L][0];updateGo();drawLearned()}
+function drawLearned(){const L=$("lv1").value,t=$("vtp").value,cs=topicCards(L,t).sort((a,b)=>b.t-a.t);$("vlws").textContent=`Words I learned in this topic: ${cs.length}`;
+ $("vlwl").replaceChildren(...cs.map(c=>el("div",`${c.word} – ${c.vi}`)))}
+$("vgo").onclick=()=>openVocab($("vtp").value,$("lv1").value,true); // opening a topic = a new lesson with new words (an unfinished lesson is continued)
+$("vtp").onchange=()=>{updateGo();drawLearned()};
 
 // study page: one page (under the tab list) for a grammar topic, a vocabulary topic or a card review.
 // Each page saves its state (words, exercises, typed answers, flashcard position), so leaving and coming back continues where you stopped
@@ -384,12 +387,12 @@ async function openGrammar(topic,L){L=L||curLevel();const k=mkKey("grammar",L,to
  secs($("gx"),[["What is it?",r.what],["How to use it",r.use],["Structure",r.structure],["Helpful hints",r.hints],["Examples",r.examples],["Watch out!",r.watch],["At work",r.business]]);
  $("gx").classList.remove("hide");const ss=S.sess=sess()[k]||{};showEx(ss.exercises||r.exercises,ss.answers,ss.checked)}
 // vocabulary: a lesson = list of words in groups -> "I understand" -> flashcards (write each word) -> exercises
-const perGroup=()=>+localStorage.vper||6,vper=(L,t)=>Math.max(2,Math.min(perGroup(),Math.ceil((VPT-topicCards(L,t).length)/5)));
+const perGroup=()=>+localStorage.vper||6;
 const GK=[["topic word","Topic words"],["phrasal verb","Phrasal verbs"],["prepositional phrase","Prepositional phrases"],["word formation","Word formation"],["word pattern","Word patterns"]];
-const resumable=k=>{const s=sess()[k];return s&&s.step&&!(s.step=="ex"&&s.checked)?s:null}; // a lesson not finished yet
-const updateGo=()=>{$("vgo").textContent=resumable(mkKey("vocab",$("lv1").value,$("vtp").value))?"Continue":"Study"};
-const vocabTitle=()=>{S.title=`${S.topic} (${topicCards(S.L,S.topic).length}/${VPT} words)`;$("stitle").textContent=S.title};
-const vocabBtns=()=>{$("vnew").textContent=`Learn ${5*vper(S.L,S.topic)} new words`;$("vprac").classList.toggle("hide",!topicCards(S.L,S.topic).length);$("vbtn").classList.remove("hide")};
+const resumable=k=>{const s=sess()[k];return s&&(s.step=="list"||s.step=="flash")?s:null}; // words not learned yet. Once the flashcards are done, opening the topic starts a new lesson
+const updateGo=()=>{$("vgo").textContent=resumable(mkKey("vocab",$("lv1").value,$("vtp").value))?"Continue lesson":"Learn new words"};
+const vocabTitle=()=>{S.title=`${S.topic} (${topicCards(S.L,S.topic).length} words learned)`;$("stitle").textContent=S.title};
+const vocabBtns=()=>{$("vnew").textContent=`Learn ${5*perGroup()} new words`;$("vprac").classList.toggle("hide",!topicCards(S.L,S.topic).length);$("vbtn").classList.remove("hide")};
 function vocabHome(){const cs=topicCards(S.L,S.topic);vocabTitle();secs($("gx"),[["Words you learned in this topic",cs.map(c=>`${c.word} – ${c.vi}`)]]);$("gx").classList.remove("hide");
  vocabBtns();$("sxw").classList.toggle("hide",!cs.length);drawMissed()}
 function openVocab(topic,L,learn){L=L||curLevel();const k=mkKey("vocab",L,topic);showStudy({kind:"vocab",L,topic,k,back:"cards",title:topic});vocabTitle();
@@ -411,9 +414,12 @@ function startFlash(){const s=S.sess,{L,topic}=S,c=cards();
  s.words.forEach(w=>c[w.word]=c[w.word]||{...w,level:L,topic,box:0,due:dayStr(1),t:Date.now()});localStorage.cards=JSON.stringify(c);
  jot("vlesson",{title:topic,words:s.words.map(w=>w.word)});stats();drawVTopics();vocabTitle();
  s.step="flash";$("vlist").classList.add("hide");deck(s.words,"lesson");$("study").scrollTop=0}
-async function learnWords(){const{L,topic,k}=S,r=await ai("vocab",{level:L,topic,per:vper(L,topic),avoid:topicCards(L,topic).map(c=>c.word).join(", ")},$("sst"));
+async function learnWords(){const{L,topic,k}=S,avoid=topicCards(L,topic).sort((a,b)=>b.t-a.t).map(c=>c.word).join(", "); // newest first: the server cuts long lists at the end
+ const r=await ai("vocab",{level:L,topic,per:perGroup(),avoid},$("sst"));
  if(bad($("sst"),r,"words","exercises")||S.k!=k)return;
- S.sess={step:"list",words:r.words.map(w=>({...w,level:L,topic})),exercises:r.exercises,answers:[],checked:false,fb:"",di:0,dscore:0};
+ const known=new Set(Object.keys(cards()).map(w=>w.toLowerCase())),fresh=r.words.filter(w=>!known.has(w.word.toLowerCase())); // the AI sometimes repeats a word you already know
+ if(fresh.length<3){$("sst").textContent="The AI gave words you already know. Please try again.";return}
+ S.sess={step:"list",words:fresh.map(w=>({...w,level:L,topic})),exercises:r.exercises,answers:[],checked:false,fb:"",di:0,dscore:0};
  persist();showList()}
 $("vnew").onclick=learnWords;
 $("vprac").onclick=()=>deck(topicCards(S.L,S.topic),"review");
