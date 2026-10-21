@@ -6,11 +6,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 DIR = os.path.dirname(os.path.abspath(__file__))
 CFG_FILE, ENV_FILE, YT_FILE = (os.path.join(DIR, f) for f in ("config.json", ".env", ".ytkey"))
 DATA = os.path.join(DIR, "data")  # one progress file per user, git-ignored
-PROGRESS = ("cards", "log", "journal", "plan", "course", "lv", "plist", "gdone", "profile", "lessons", "missed", "testmark", "sessions", "_t")  # _t: when the browser last changed something
+PROGRESS = ("cards", "log", "journal", "plan", "course", "lv", "plist", "gdone", "profile", "lessons", "missed", "testmark", "sessions", "phrases", "_t")  # _t: when the browser last changed something
 HOST, PORT = os.environ.get("HOST", "127.0.0.1"), int(os.environ.get("PORT", 8000))
 AUTH = os.environ.get("APP_PASSWORD", "")  # cloud: set it. The browser then asks for a login; the login name picks the progress file
 LOCK = threading.Lock()
 KEYS = ("provider", "model", "base_url", "history_turns", "max_tokens")
+NUM_KEYS = ("budget", "price_in", "price_out")  # budget in $ per month; prices in $ per million tokens (you can change them: providers change prices)
+DEFAULTS = {"budget": 5.0, "price_in": 1.0, "price_out": 5.0}
+USAGE_FILE = os.path.join(DIR, "usage.json")  # token counts per month, git-ignored
 LEVELS = ("A1", "A2", "B1", "B2", "C1", "C2")
 SYSTEM = ("You are a friendly English tutor for a first-year Business English student. "
           "Reply in English only, short and simple. If the student's message has mistakes, "
@@ -34,6 +37,29 @@ def get_ytkey(): return read_key(YT_FILE, "YT_API_KEY")
 
 def trim(history, turns): return history[-2 * turns:]  # one turn = user + assistant
 
+def month(): return time.strftime("%Y-%m")
+
+def load_usage():
+    try: return json.load(open(USAGE_FILE, encoding="utf-8"))
+    except (OSError, ValueError): return {}
+
+def record_usage(tin, tout):
+    """Count the tokens the provider says it used, per month (the cost meter reads this)."""
+    try: tin, tout = int(tin or 0), int(tout or 0)
+    except (TypeError, ValueError): return
+    try:
+        with LOCK:
+            u = load_usage(); m = u.setdefault(month(), {"in": 0, "out": 0, "calls": 0})
+            m["in"] += tin; m["out"] += tout; m["calls"] += 1
+            with open(USAGE_FILE + ".tmp", "w", encoding="utf-8") as f: json.dump(u, f)
+            os.replace(USAGE_FILE + ".tmp", USAGE_FILE)
+    except OSError: pass  # the meter must never break a lesson
+
+def usage_summary():
+    c = {**DEFAULTS, **load_cfg()}; m = load_usage().get(month(), {"in": 0, "out": 0, "calls": 0})
+    cost = m["in"] / 1e6 * float(c["price_in"]) + m["out"] / 1e6 * float(c["price_out"]); budget = float(c["budget"])
+    return {**m, "month": month(), "cost": round(cost, 4), "budget": budget, "pct": round(100 * cost / budget) if budget > 0 else 0}
+
 def ask(messages, system=SYSTEM, max_tokens=None):
     c, key = load_cfg(), get_key()
     if not key: raise ValueError("No API key yet. Open Settings and save your key.")
@@ -51,6 +77,8 @@ def ask(messages, system=SYSTEM, max_tokens=None):
         r = json.load(urllib.request.urlopen(urllib.request.Request(c["base_url"], json.dumps(body).encode(), hdr), timeout=120))
     except urllib.error.HTTPError as e:
         raise ValueError(f"API error {e.code}: {e.read().decode()[:200]}")
+    u = r.get("usage") or {}
+    record_usage(u.get("input_tokens", u.get("prompt_tokens")), u.get("output_tokens", u.get("completion_tokens")))
     return r["content"][0]["text"] if anth else r["choices"][0]["message"]["content"]
 
 def parse_json(t, o, c):
@@ -115,6 +143,29 @@ def clean_exam(r):
     use = p.get("use") if isinstance(p.get("use"), list) else []
     return {"title": str(r.get("title", ""))[:100], "exercises": ex, "paragraph": {"prompt": str(p["prompt"])[:300], "use": [str(w)[:40] for w in use][:8]}}
 
+def clean_reading(r):
+    text = str(r.get("text", "")).strip()
+    ex = [e for e in map(clean_ex, r.get("exercises") if isinstance(r.get("exercises"), list) else []) if e and e["type"] in ("choice", "write")]
+    if not 200 <= len(text) <= 3500 or sum(e["type"] == "choice" for e in ex) < 3: raise ValueError(INCOMPLETE)
+    return {"title": str(r.get("title", ""))[:100], "text": text, "exercises": ex}
+
+def clean_define(r):
+    out = {k: str(r.get(k, ""))[:200] for k in ("word", "ipa", "pos", "vi", "meaning", "example", "note")} if isinstance(r, dict) else {}
+    if not out.get("word", "").strip() or not out.get("vi", "").strip(): raise ValueError(INCOMPLETE)
+    out["type"] = "topic word"
+    return out
+
+def clean_phrases(r):
+    items = [{"phrase": str(i["phrase"]).strip()[:200], "use": str(i.get("use", ""))[:80]} for i in (r.get("items") if isinstance(r.get("items"), list) else [])
+             if isinstance(i, dict) and len(str(i.get("phrase", "")).strip()) >= 5]
+    if len(items) < 3: raise ValueError(INCOMPLETE)
+    return {"items": items[:10]}
+
+def clean_mock(r):
+    ex = [e for e in map(clean_ex, r.get("exercises") if isinstance(r.get("exercises"), list) else []) if e and e["type"] in ("choice", "gap", "error")]
+    if len(ex) < 10: raise ValueError(INCOMPLETE)
+    return {"exercises": ex[:20]}
+
 def clean_placement(r):
     out = []
     for x in r.get("items") if isinstance(r.get("items"), list) else []:
@@ -167,6 +218,29 @@ def run_task(task, d):
                f"Vocabulary studied: {g('words')}. Grammar studied: {g('grammar')}. Mistakes they made before (test these again): {g('missed')}. Return JSON "
                '{"title":"",' + ex_spec(10, False) + ',"paragraph":{"prompt":"one short writing task that needs 4-6 sentences, about work or study",'
                '"use":["4-6 of the studied words"]}}.', 2400, "{", "}"))
+    if task == "reading":
+        return clean_reading(js(f"CEFR level {lv}. Write a short text for a Vietnamese Business English student about: {g('topic') or 'a work situation'}. "
+               "It must be 140-200 words, at this level, in a realistic business setting (an email, a news item about a company, meeting notes or a report). "
+               f"If it fits naturally, use some of these words the student has learned: {g('words')}. Return JSON "
+               '{"title":"","text":"the text; separate paragraphs with a blank line","exercises":[5 comprehension questions of type '
+               '{"type":"choice","q":"a question about the text","options":["a","b","c"],"answer":"b"} (each has exactly ONE correct answer; check twice), '
+               'then 1 item {"type":"write","q":"Summarise the text in one sentence."}]}.', 1800, "{", "}"))
+    if task == "define":
+        return clean_define(js(f"CEFR level {lv}. Explain the English word '{g('word')[:40]}' as it is used in this sentence: {g('sentence')[:300]}. Return JSON "
+               '{"word":"the base form of the word","ipa":"/IPA/","pos":"noun/verb/adjective/...","vi":"short Vietnamese meaning in this context",'
+               '"meaning":"simple English meaning","example":"a new short example sentence with the word","note":"short tip: collocation or common mistake"}.', 400, "{", "}"))
+    if task == "phrases":
+        return clean_phrases(js(f"CEFR level {lv}. Give 8 useful English phrases for this Business English situation: {g('situation')[:100]}. "
+               "Natural and polite, each short enough to copy into an email or say in a meeting (use [name] or [date] only where needed). Return JSON "
+               '{"items":[{"phrase":"","use":"when to use it, 8 words at most"}]}.', 900, "{", "}"))
+    if task == "mock":
+        return clean_mock(js(f"CEFR level {lv}. Make a timed Use of English style mock test of 15 items for a Vietnamese Business English student. "
+               "Every item must have exactly ONE correct answer (check twice). Use: 5 items of type choice (a sentence with ___ and 3 or 4 options, including word patterns and phrasal verbs), "
+               "4 items of type gap for word formation (a sentence with ___ and a CAPITAL base word in (brackets); the answer is the derived word), "
+               "3 items of type gap testing a preposition or word pattern (the answer is the missing word; add a second accepted answer if one exists), "
+               "2 items of type error (a sentence with one mistake; the answer is the corrected sentence) and 1 more choice item on a collocation. Return JSON "
+               '{"exercises":[{"type":"choice","q":"sentence with ___","options":["a","b","c"],"answer":"b"},{"type":"gap","q":"sentence with ___ (BASE)","answer":["x"]},'
+               '{"type":"error","q":"a sentence with one mistake","answer":["the corrected sentence"]}]}.', 3200, "{", "}"))
     if task == "placement":
         return clean_placement(js("Make a placement test for a Vietnamese learner of English. 12 items: exactly 2 for each CEFR level A1, A2, B1, B2, C1, C2, "
             "in that order, each clearly at its level; mix grammar and vocabulary (work contexts are fine from B1). Return JSON "
@@ -216,6 +290,12 @@ def save_settings(d):
     c = load_cfg()
     for k in KEYS:
         if k in d and str(d[k]).strip(): c[k] = d[k]
+    for k in NUM_KEYS:
+        if str(d.get(k, "")).strip():
+            try: v = float(d[k])
+            except ValueError: raise ValueError("Budget and prices must be numbers.")
+            if not 0 <= v <= 100000: raise ValueError("Budget and prices must be between 0 and 100000.")
+            c[k] = v
     c["history_turns"], c["max_tokens"] = max(1, int(c["history_turns"])), max(50, int(c["max_tokens"]))
     json.dump(c, open(CFG_FILE, "w"), indent=2)
     for field, path in (("api_key", ENV_FILE), ("yt_key", YT_FILE)):
@@ -280,7 +360,8 @@ class H(BaseHTTPRequestHandler):
         uid = self.user()
         if not uid: return self.deny()
         u = urllib.parse.urlparse(self.path)
-        if u.path == "/settings": self.reply(lambda: {**load_cfg(), "key_set": bool(get_key()), "yt_set": bool(get_ytkey())})
+        if u.path == "/settings": self.reply(lambda: {**DEFAULTS, **load_cfg(), "key_set": bool(get_key()), "yt_set": bool(get_ytkey())})
+        elif u.path == "/usage": self.reply(usage_summary)
         elif u.path == "/search": self.reply(lambda: {"results": search(urllib.parse.parse_qs(u.query).get("q", [""])[0])})
         else:  # the saved progress is put into the page, so it is there before the page code runs ("<" escaped: no </script> tricks)
             page = open(os.path.join(DIR, "index.html"), encoding="utf-8").read()

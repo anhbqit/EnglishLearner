@@ -3,7 +3,7 @@ import server
 
 tmp = tempfile.mkdtemp(dir=server.DIR)  # temp config/keys/data: never touches the real ones
 server.CFG_FILE, server.ENV_FILE, server.YT_FILE, server.DATA = (os.path.join(tmp, f) for f in ("c.json", ".env", ".yt", "data"))
-json.dump({"provider": "anthropic", "model": "m", "base_url": "u", "history_turns": 4, "max_tokens": 300}, open(server.CFG_FILE, "w"))
+json.dump({"provider": "anthropic", "model": "m", "base_url": "http://localhost/v1", "history_turns": 4, "max_tokens": 300}, open(server.CFG_FILE, "w"))
 U = "http://127.0.0.1:8123"
 s = server.ThreadingHTTPServer(("127.0.0.1", 8123), server.H); threading.Thread(target=s.serve_forever, daemon=True).start()
 def post(p, b): return json.load(urllib.request.urlopen(urllib.request.Request(U + p, json.dumps(b).encode())))
@@ -20,6 +20,28 @@ try:
     r = get("/settings")
     assert r["model"] == "x" and r["history_turns"] == 2 and r["key_set"] and r["yt_set"] and "secret" not in json.dumps(r)
     assert b"English Learner" in urllib.request.urlopen(U + "/").read()
+
+    # cost meter: tokens come from the provider's answer (both reply formats), are counted per month, and cost uses your own prices
+    server.USAGE_FILE = os.path.join(tmp, "usage.json")
+    class Resp:
+        def __init__(self, o): self.b = json.dumps(o).encode()
+        def read(self): return self.b
+    real_open, cfg_text = urllib.request.urlopen, open(server.CFG_FILE).read()
+    try:
+        urllib.request.urlopen = lambda *a, **k: Resp({"content": [{"text": "hi"}], "usage": {"input_tokens": 1000, "output_tokens": 200}})
+        assert server.ask([{"role": "user", "content": "x"}]) == "hi"
+        json.dump({**json.loads(cfg_text), "provider": "openai"}, open(server.CFG_FILE, "w"))
+        urllib.request.urlopen = lambda *a, **k: Resp({"choices": [{"message": {"content": "yo"}}], "usage": {"prompt_tokens": 500, "completion_tokens": 100}})
+        assert server.ask([{"role": "user", "content": "x"}]) == "yo"
+        urllib.request.urlopen = lambda *a, **k: Resp({"choices": [{"message": {"content": "no usage"}}]})
+        assert server.ask([{"role": "user", "content": "x"}]) == "no usage"
+    finally:
+        urllib.request.urlopen = real_open; open(server.CFG_FILE, "w").write(cfg_text)
+    u = get("/usage"); assert (u["in"], u["out"], u["calls"], u["cost"], u["pct"], u["budget"]) == (1500, 300, 3, 0.003, 0, 5.0), u
+    post("/settings", {"budget": "0.004", "price_in": "1", "price_out": "5"}); assert get("/usage")["pct"] == 75 and get("/settings")["budget"] == 0.004
+    err(lambda: post("/settings", {"budget": "abc"}), "numbers"); err(lambda: post("/settings", {"price_in": "-1"}), "between"); err(lambda: post("/settings", {"price_out": "nan"}), "between")
+    assert get("/usage")["budget"] == 0.004  # a bad value changes nothing
+    post("/settings", {"budget": "5"})
 
     # AI tasks with a fake model (no network, no real text)
     seen = []
@@ -64,6 +86,24 @@ try:
     err(lambda: server.run_task("exam", {"level": "B1"}), "incomplete")
     server.ask = fake(json.dumps({"title": "T", "exercises": ex}))
     err(lambda: server.run_task("exam", {"level": "B1"}), "incomplete")
+
+    # reading text, word lookup, phrase bank and mock exam: AI output is validated
+    q3 = [{"type": "choice", "q": "q", "options": ["a", "b", "c"], "answer": "b"}] * 3
+    server.ask = fake(json.dumps({"title": "T", "text": "x" * 300, "exercises": q3 + [{"type": "write", "q": "Summarise."}, {"type": "gap", "q": "no", "answer": "x"}, {"type": "choice", "q": "bad", "options": ["a"], "answer": "a"}]}))
+    r = server.run_task("reading", {"level": "B1", "topic": "Meetings", "words": "agenda"})
+    assert len(r["text"]) == 300 and [e["type"] for e in r["exercises"]] == ["choice"] * 3 + ["write"] and "Meetings" in seen[-1] and "agenda" in seen[-1]
+    for bad in ({"title": "T", "text": "short", "exercises": q3}, {"title": "T", "text": "x" * 300, "exercises": q3[:2]}, {"title": "T", "text": "x" * 4000, "exercises": q3}):
+        server.ask = fake(json.dumps(bad)); err(lambda: server.run_task("reading", {"level": "B1"}), "incomplete")
+    server.ask = fake(json.dumps({"word": "meeting", "ipa": "/m/", "pos": "noun", "vi": "cuoc hop", "meaning": "m", "example": "e", "note": "n"}))
+    r = server.run_task("define", {"level": "B1", "word": "meetings", "sentence": "We have meetings."}); assert r["word"] == "meeting" and r["type"] == "topic word" and "'meetings'" in seen[-1]
+    server.ask = fake(json.dumps({"word": "x", "vi": ""})); err(lambda: server.run_task("define", {"level": "B1", "word": "x"}), "incomplete")
+    server.ask = fake(json.dumps({"items": [{"phrase": "I am writing to ask about...", "use": "opening an email"}, {"phrase": "Best regards", "use": "closing"}, {"phrase": "no"}, "junk", {"phrase": "Could you send it by Friday?"}]}))
+    r = server.run_task("phrases", {"level": "B1", "situation": "Opening an email"}); assert [i["phrase"][:5] for i in r["items"]] == ["I am ", "Best ", "Could"] and "Opening an email" in seen[-1]
+    server.ask = fake(json.dumps({"items": [{"phrase": "Best regards"}]})); err(lambda: server.run_task("phrases", {"level": "B1"}), "incomplete")
+    mk = [{"type": "choice", "q": "q ___", "options": ["a", "b"], "answer": "a"}] * 6 + [{"type": "gap", "q": "q ___ (BASE)", "answer": ["x"]}] * 5 + [{"type": "error", "q": "q", "answer": ["x"]}] * 2 + [{"type": "order", "answer": "a b c d"}, {"type": "write", "q": "w"}]
+    server.ask = fake(json.dumps({"exercises": mk}))
+    r = server.run_task("mock", {"level": "B2"}); assert len(r["exercises"]) == 13 and {e["type"] for e in r["exercises"]} == {"choice", "gap", "error"} and "15 items" in seen[-1]
+    server.ask = fake(json.dumps({"exercises": mk[:8]})); err(lambda: server.run_task("mock", {"level": "B2"}), "incomplete")
 
     # level test and practice plan
     pit = lambda lv, sk="grammar": {"level": lv, "skill": sk, "type": "choice", "q": "q ___", "options": ["a", "b"], "answer": "a"}
@@ -111,7 +151,7 @@ try:
     page = lambda h={}: urllib.request.urlopen(urllib.request.Request(U + "/", headers=h)).read().decode()
     assert "__PROGRESS__" not in page() and "SERVER_PROGRESS={}" in page()
     post("/progress", {"data": {"cards": '{"a":1}', "log": "x</script>"}})
-    post("/progress", {"data": {"lv": "B1", "missed": "[]", "lessons": "{}", "testmark": "null", "sessions": "{}", "_t": "123"}})
+    post("/progress", {"data": {"lv": "B1", "missed": "[]", "lessons": "{}", "testmark": "null", "sessions": "{}", "phrases": "[]", "_t": "123"}})
     p = page()
     assert "x</script>" not in p and "x\\u003c/script>" in p and '"lv": "B1"' in p and '"cards"' in p
     # a daily backup of the previous version, and only the last 7 are kept

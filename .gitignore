@@ -4,3 +4,4 @@ books/
 *.tmp*
 __pycache__
 data/
+usage.json

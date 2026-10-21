@@ -34,13 +34,18 @@ small,a{color:#777}
 .wd{background:#fff;border:1px solid #eadde3;border-radius:12px;padding:8px 12px;margin:6px 0;cursor:pointer}.wd:hover{border-color:#e0679a}
 .wd .row{margin:2px 0}.ww{font-size:18px}.ipa{color:#777}.wd button{padding:2px 8px}.wd .det{margin-top:6px;padding-top:6px;border-top:1px dashed #eadde3}
 .chip{font-size:12px;padding:2px 9px;border-radius:999px;background:#f3eaee;color:#6b4a5a}.chip.rem{background:#e0f4e8;color:#1f7a45}.chip.lrn{background:#fde0ec;color:#a3295f}.chip.skip{background:#fff1d6;color:#8a5a00}.chip.due{background:#fff;border:1px solid #e0679a;color:#a3295f}
+.num{width:80px}#s input[type=checkbox]{width:auto}
+.pb{height:10px;background:#eadde3;border-radius:6px;overflow:hidden;margin:6px 0}.pf{height:100%;background:#e0679a}
+.bd{padding:6px 10px;border-radius:999px;background:#fff1d6;border:1px solid #f0d49a}.bd.off{filter:grayscale(1);opacity:.45}
+.rw{cursor:pointer;border-radius:4px}.rw:hover{background:#fde0ec}#rtx p{line-height:1.7}
+.dw{display:inline-block;margin:2px 4px;padding:1px 6px;border-radius:6px}.dw.y{background:#e0f4e8;color:#1f7a45}.dw.n{background:#fde0e0;color:#c33;text-decoration:underline}
 .sticky{position:sticky;bottom:0;background:#fdf6f9;padding:10px 0;margin:0;border-top:1px solid #eadde3;z-index:2}
 </style>
 <main><header>English Learner 🌸 <button type=button id=g>Settings</button></header>
-<nav id=nav><button data-t=today class=on>Today</button><button data-t=review>Review</button><button data-t=place>My Course</button><button data-t=chat>Chat</button><button data-t=cards>Vocabulary</button><button data-t=grammar>Grammar</button><button data-t=test>Test</button><button data-t=shadow>Shadowing</button><button data-t=music>YouTube</button><button data-t=acct>Account</button></nav>
+<nav id=nav><button data-t=today class=on>Today</button><button data-t=review>Review</button><button data-t=place>My Course</button><button data-t=chat>Chat</button><button data-t=cards>Vocabulary</button><button data-t=grammar>Grammar</button><button data-t=read>Reading</button><button data-t=prac>Practice</button><button data-t=test>Test</button><button data-t=shadow>Shadowing</button><button data-t=music>YouTube</button><button data-t=acct>Account</button></nav>
 
 <section class="tab on" id=today>
-<div id=clock></div><div id=greet></div><small id=yday></small><div id=tl></div></section>
+<div id=clock></div><div id=greet></div><small id=yday></small><div id=gbar></div><div id=tl></div></section>
 
 <section class=tab id=place>
 <small>A 5-minute test to find your level. Please don't use a dictionary. If you don't know an answer, guess or leave it blank. I will then make a personal practice plan for you.</small>
@@ -60,12 +65,24 @@ small,a{color:#777}
 <small id=sync></small>
 <div id=as></div>
 <b>Activity</b> <small>last 20 weeks · click a day to see its review</small><div class=hm id=ah></div>
-<div id=aw></div></section>
+<div id=aw></div>
+<b>Daily goal and reminder</b>
+<div class=row><label>Activities per day <input id=pgoal type=number min=1 max=500 class=num></label>
+<label><input type=checkbox id=pron> Remind me at <input type=time id=prt></label></div>
+<small id=pmsgr>Reminders work only while this page is open in your browser.</small>
+<b>Badges</b><div class=row id=bdg></div>
+<b>Backup</b><small>Your progress is also saved on the server. A downloaded file is an extra copy that you keep yourself.</small>
+<div class=row><button id=bdl class=sec>Download my progress</button><button id=bup class=sec>Restore from a file</button><input type=file id=bfile accept=".json,application/json" class=hide><button id=bcsv class=sec>Export my words (CSV)</button></div><small id=bmsg></small></section>
 
 <section class=tab id=chat>
 <div class=row><select id=mode><option value=chat>Free chat<option value=email>Business email<option value=roleplay>Role-play</select>
 <select id=scn class=hide><option value=interview>Job interview<option value=meeting>Team meeting<option value=customer>Unhappy customer<option value=supplier>Supplier negotiation<option value=smalltalk>Coworker small talk</select>
-<select class=lv id=lv0></select><button id=start class=hide>Start</button></div>
+<select class=lv id=lv0></select><button id=start class=hide>Start</button><button id=phb class=sec>📋 My phrases</button></div>
+<div class="card hide" id=phr>
+<div class=row><select id=phs class=grow></select><button id=phg>Suggest phrases</button><small id=phst></small></div>
+<div id=phsug></div>
+<div class=row><input id=phn class=grow placeholder="Add your own phrase" autocomplete=off><button id=pha class=sec>Add</button></div>
+<div class=row><b>Saved phrases</b><select id=phf></select></div><div id=phl></div></div>
 <div id=log></div>
 <form class=c id=f><textarea id=t rows=2 placeholder="Type in English... (Enter to send, Shift+Enter for a new line)" autocomplete=off></textarea><button>Send</button></form></section>
 
@@ -95,12 +112,33 @@ small,a{color:#777}
 <div class="row sticky"><button id=sck>Check answers</button><button id=snew class=sec>New exercises</button><b id=ssc></b><small id=sst2></small></div><div class=fb id=sfb></div>
 <div class=row><b id=smh></b><button id=smc class=sec>Clear</button></div><div id=smiss></div></div></section>
 
+<section class=tab id=read>
+<div class=row><select class=lv id=lv5></select><select id=rtp class=grow></select><button id=rnew>New text</button><small id=rst></small></div>
+<small>Read the text. Click any word to see its meaning and save it to your words. Then answer the questions.</small>
+<div class="card hide" id=rc><b class=h2 id=rt></b><div id=rtx></div>
+<div class="card hide" id=rdef></div>
+<b>Questions</b><div id=rex></div>
+<div class="row sticky"><button id=rck>Check answers</button><b id=rsc></b><small id=rst2></small></div><div class=fb id=rfb></div></div></section>
+
+<section class=tab id=prac>
+<small>Short practice from the words you already learned. It needs no AI, so it costs nothing.</small>
+<div class=row><button id=pq>⚡ 5-minute review</button><button id=pdict class=sec>👂 Dictation</button><button id=pspk class=sec>🎤 Pronunciation</button></div><small id=pst2></small>
+<div class="card hide" id=pm></div>
+<div id=pweak></div></section>
+
 <section class=tab id=test>
+<div class=row><select id=tmode><option value=prog>Progress test (from what I learned)<option value=mock>Mock exam (timed)</select></div>
+<div id=tprog>
 <small>This test is made from what you learned: your words, your grammar topics and your mistakes.</small>
 <div class=row><select class=lv id=lv3></select><button id=tg>Make my test</button><small id=st4></small></div><small id=tinfo></small>
 <div class="card hide" id=tc><b id=tt></b><div id=tex></div>
 <b>Paragraph</b><p id=tpp></p><small id=tpu></small><textarea id=tp placeholder="Write your paragraph here..."></textarea>
-<div class=row><button id=tk>Check my test</button></div><div class=fb id=tf></div></div></section>
+<div class=row><button id=tk>Check my test</button></div><div class=fb id=tf></div></div></div>
+<div id=tmock class=hide>
+<small>A timed Use of English style test: 15 questions in 20 minutes. When the time is up, your answers are checked automatically.</small>
+<div class=row><select class=lv id=lv6></select><button id=mgo>Start mock exam</button><b id=mtime></b><small id=mst></small></div>
+<div class="card hide" id=mc><div id=mex></div>
+<div class="row sticky"><button id=mck>Finish and check</button><b id=msc></b></div><div class=fb id=mfb></div></div></div></section>
 
 <section class=tab id=shadow>
 <div class=row><input id=yurl class=grow placeholder="Paste a YouTube link"><button id=yl>Load</button></div>
@@ -115,7 +153,10 @@ small,a{color:#777}
 <div class=row><select id=spd><option value=0.5>0.5x<option value=0.75>0.75x<option value=1 selected>1x</select>
 <button id=back>⏪ 5s</button><button id=ma>Set A</button><button id=mb>Set B</button>
 <label><input type=checkbox id=lp> Loop A–B</label><small id=ab>A: – B: –</small></div>
-<small>Play a short part, loop it, then say it together with the speaker. Subtitles are on if the video has them.</small></div></section>
+<small>Play a short part, loop it, then say it together with the speaker. Subtitles are on if the video has them.</small></div>
+<div class=card><b>🎤 Check my shadowing</b><br><small>Type one sentence from the video, say it, and see how close you were.</small>
+<input id=shs class=w100 placeholder="The sentence you practised" autocomplete=off>
+<div class=row><button id=shl class=sec>🔊 Listen (computer voice)</button><button id=shm>🎤 Say it</button></div><div class=fb id=sho></div></div></section>
 
 <section class=tab id=music>
 <div class=row><input id=ps class=grow placeholder="Search YouTube (e.g. business english podcast)"><button id=pg>Search</button></div>
@@ -138,23 +179,30 @@ small,a{color:#777}
 <label>YouTube API key (for search) <small id=ks2></small><input id=yt_key type=password placeholder="leave empty to keep" autocomplete=off></label>
 <label>Chat turns remembered<input id=history_turns type=number min=1></label>
 <label>Max reply tokens (chat)<input id=max_tokens type=number min=50></label>
+<label>Monthly budget ($)<input id=budget type=number min=0 step=0.5></label>
+<label>Price per 1M input tokens ($)<input id=price_in type=number min=0 step=0.01></label>
+<label>Price per 1M output tokens ($)<input id=price_out type=number min=0 step=0.01></label>
+<div id=usage class=card></div>
+<small>The meter is an estimate. Prices change, so check your provider's price page and update these numbers. Only the limit you set in the provider's console can really stop spending.</small>
+<label><input type=checkbox id=stt> Allow speech recognition (microphone)</label>
+<small>Used by Pronunciation and Shadowing. Chrome sends the audio to Google and Edge to Microsoft to turn it into text. It is not sent to this app or to the AI.</small>
 <p><button type=button id=sv>Save</button> <small id=st></small></p>
 <small>Limit your monthly spending in the Anthropic console. Don't type personal info.</small></aside>
 
 <script>
 const SP=window.SERVER_PROGRESS||{},LOCAL_NEWER=+localStorage._t>+(SP._t||0);
 if(!LOCAL_NEWER)for(const k in SP)localStorage[k]=SP[k]; // the server copy wins, unless this browser changed something more recently (a quick reload)
-const $=i=>document.getElementById(i),F=["provider","model","base_url","history_turns","max_tokens"];
+const $=i=>document.getElementById(i),F=["provider","model","base_url","history_turns","max_tokens","budget","price_in","price_out"];
 const post=(u,b)=>fetch(u,{method:"POST",body:JSON.stringify(b)}).then(r=>r.json());
 const jget=(k,d)=>JSON.parse(localStorage[k]||d);
 const dayStr=n=>new Date(Date.now()+(n||0)*864e5).toLocaleDateString("sv"); // yyyy-mm-dd, local time
 const el=(t,txt,cls)=>{const e=document.createElement(t);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e}; // textContent only: AI text is never HTML
 const secs=(ct,pairs)=>ct.replaceChildren(...pairs.flatMap(([h,v])=>!v||!v.length?[]:[el("b",h),Array.isArray(v)?(u=>(v.forEach(x=>u.append(el("li",x))),u))(el("ul")):el("p",v)]));
 const LV=["A1","A2","B1","B2","C1","C2"],curLevel=()=>localStorage.lv||"A1";
-const setLevel=l=>{document.querySelectorAll(".lv").forEach(o=>o.value=l);localStorage.lv=l;drawPath();drawVTopics()};
+const setLevel=l=>{document.querySelectorAll(".lv").forEach(o=>o.value=l);localStorage.lv=l;drawPath();drawVTopics();drawRTopics()};
 document.querySelectorAll(".lv").forEach(s=>{LV.forEach(l=>s.add(new Option(l)));s.value=curLevel();s.onchange=()=>setLevel(s.value)});
 // call the AI; shows errors/progress in `out`, returns the result or undefined
-const ai=async(task,d,out)=>{out.textContent="Thinking...";const r=await post("/ai",{task,...d});out.textContent=r.error||"";return r.result};
+const ai=async(task,d,out)=>{out.textContent="Thinking...";const r=await post("/ai",{task,...d});out.textContent=r.error||"";refreshUsageSoon();return r.result};
 const bad=(out,r,...keys)=>{const x=!r||keys.some(k=>!Array.isArray(r[k]));if(x&&r)out.textContent="The AI reply was incomplete. Please try again.";return x};
 
 // progress, all in localStorage (and copied to the server): saved words, a per-day activity log, a journal, mistakes
@@ -197,7 +245,7 @@ const go=t=>{document.querySelectorAll("nav button,.tab").forEach(x=>x.classList
  document.querySelector(`[data-t=${t}]`).classList.add("on");$(t).classList.add("on");
  if(t=="test")drawTestInfo();
  if(t=="review"){if(!$("rd").value)$("rd").value=dayStr();drawReview()}
- if(t=="acct")drawAccount();if(t=="place")drawCourse();if(t=="grammar")drawPath();if(t=="cards"){drawVTopics();stats()}if(t=="today")today();if(OPEN[t])reopen(t);markTest()};
+ if(t=="prac")drawWeak();if(t=="read")drawRTopics();if(t=="acct")drawAccount();if(t=="place")drawCourse();if(t=="grammar")drawPath();if(t=="cards"){drawVTopics();stats()}if(t=="today")today();if(OPEN[t])reopen(t);markTest()};
 $("nav").onclick=e=>e.target.dataset.t&&go(e.target.dataset.t);
 
 // the test reminder: something new was learned since the last test
@@ -212,19 +260,26 @@ const missions=P=>{const n=Math.min(P.due||0,10),L=P.L||curLevel();return[
  {k:"vocab",name:"Vocabulary lesson",what:P.vocab_topic?`${P.vocab_topic}: learn new words`:"No topics at this level.",goal:1,tab:"cards",run:()=>P.vocab_topic&&(openVocab(P.vocab_topic,L,true),1)},
  ...(n?[{k:"cards",name:"Review cards",what:`Review ${n} saved words`,goal:n,tab:"cards",run:()=>($("rvw").click(),1)}]:[]),
  {k:"grammar",name:"Grammar lesson",what:P.grammar_topic||"You finished every grammar topic at this level. Choose a higher level.",goal:1,tab:"grammar",run:()=>P.grammar_topic&&(openGrammar(P.grammar_topic,L),1)},
+ {k:"reading",name:"Reading",what:"Read a short business text and answer the questions",goal:1,tab:"read"},
+ {k:"quick",name:"Quick review",what:"Practise your weak words (about 5 minutes, no AI)",goal:1,tab:"prac",run:()=>($("pq").click(),1)},
  {k:"chat",name:"Speaking & writing",what:P.practice||DEF,goal:3,tab:"chat"},
  {k:"test",name:"Progress test",what:"Take a test made from what you have learned",goal:1,tab:"test"},
  {k:"shadow",name:"Listening",what:"Shadow 1 video",goal:1,tab:"shadow"}]};
 let shown;
-function today(){shown=dayStr();const L=jget("log","{}"),t=L[shown]||{},y=L[dayStr(-1)]||{},h=new Date().getHours(),P=plan()||{},C=course(),td=testDue(),box=[];
- $("greet").textContent=`${h<12?"Good morning":h<18?"Good afternoon":"Good evening"}${profile().name?", "+profile().name:""}! Here are your missions for today.`;
+function today(){shown=dayStr();const si=streakInfo(),L=si.L,t=L[shown]||{},y=L[dayStr(-1)]||{},h=new Date().getHours(),P=plan()||{},C=course(),td=testDue(),box=[],g=goal(),n=si.today,pr=profile();
+ $("greet").textContent=`${h<12?"Good morning":h<18?"Good afternoon":"Good evening"}${pr.name?", "+pr.name:""}! Here are your missions for today.`;
  $("yday").textContent=Object.keys(y).length?`Yesterday: ${y.vocab||0} vocab lessons, ${y.cards||0} cards, ${y.grammar||0} grammar, ${y.chat||0} messages, ${y.test||0} tests, ${y.shadow||0} videos.`:"Yesterday: no activity.";
+ const pf=el("div","","pf"),pb=el("div","","pb");pf.style.width=Math.min(100,Math.round(100*n/g))+"%";pb.append(pf);
+ $("gbar").replaceChildren(el("div",`🎯 Goal: ${Math.min(n,g)}/${g} activities today${n>=g?" ✓ Well done!":""} · 🔥 Streak: ${si.cur} day${si.cur==1?"":"s"}`),pb,
+  ...(usage?[el("small",`💸 AI cost this month ≈ $${usage.cost.toFixed(2)} of $${usage.budget} (${usage.pct}%)`)]:[]));
  if(td.due){const a=el("div","","card alert"),b=el("button","Take the test now");b.onclick=()=>{go("test");$("tg").click()};
   a.append(el("b","📝 Test time!"),el("br"),`Since your last test you learned ${td.nw} new words and ${td.ng} grammar topics. Take the test to see what you remember. `,b);box.push(a)}
+ if(pr.ron&&pr.rtime&&n<g&&new Date().toTimeString().slice(0,5)>=pr.rtime)box.push(el("div",`⏰ Reminder: you are at ${n}/${g} activities today. A short lesson will keep your streak!`,"card alert"));
+ if(usage&&usage.pct>=80)box.push(el("div",usage.pct>=100?"💸 Your estimated AI budget for this month is used up. The real limit is the one in your provider's console, so please check it there.":`💸 You have used ${usage.pct}% of your monthly AI budget (estimate).`,"card alert"));
  if(!C){const d=el("div","","card"),b=el("button","Take the level test");b.onclick=()=>go("place");d.append("⭐ Start here: a 5-minute test so I can make your personal practice plan. ",b);box.push(d)}
  else if(C.idx>=C.units.length)box.push(el("div","🎉 You finished your practice plan! Retake the level test (My Course) for a new one.","card"));
- $("tl").replaceChildren(...box,...missions(P).map(m=>{const n=t[m.k]||0,d=el("div","","card"+(n>=m.goal?" done":"")),b=el("button","Go");
-  b.onclick=()=>{if(!(m.run&&m.run()))go(m.tab)};d.append(`${n>=m.goal?"✓":"○"} ${m.name} (${Math.min(n,m.goal)}/${m.goal})`,el("br"),m.what+" ",b);return d}));markTest()}
+ $("tl").replaceChildren(...box,...missions(P).map(m=>{const c=t[m.k]||0,d=el("div","","card"+(c>=m.goal?" done":"")),b=el("button","Go");
+  b.onclick=()=>{if(!(m.run&&m.run()))go(m.tab)};d.append(`${c>=m.goal?"✓":"○"} ${m.name} (${Math.min(c,m.goal)}/${m.goal})`,el("br"),m.what+" ",b);return d}));markTest()}
 function ensurePlan(){shown=dayStr();const old=plan();if(old&&old.date==shown&&old.v==2)return today(); // set first so the clock tick does not start it twice
  const C=course();
  if(C){if(old&&old.date!=shown&&old.unit==C.idx){const d=jget("log","{}")[old.date]||{};if(d.vocab&&d.grammar)C.idx++} // both lessons done yesterday: next idea
@@ -238,11 +293,11 @@ const tick=()=>{$("clock").textContent=new Date().toLocaleString("en-GB",{weekda
 // day review: reads the journal (what you learned), the log (counts) and your mistakes for one day. No AI call, no cost
 function drawReview(){const d=$("rd").value||dayStr(),J=jget("journal","{}")[d]||[],L=jget("log","{}")[d]||{},of=k=>J.filter(e=>e.k==k),last={};
  of("wcheck").forEach(e=>last[e.w]=e.ok);const ws=ok=>Object.keys(last).filter(w=>last[w]==ok).join(", ");
- const names={vocab:"Vocabulary lessons",cards:"Words written",grammar:"Grammar lessons",chat:"Chat messages",test:"Tests",shadow:"Shadowing videos"};
+ const names={vocab:"Vocabulary lessons",cards:"Words written",grammar:"Grammar lessons",chat:"Chat messages",test:"Tests",shadow:"Shadowing videos",reading:"Reading texts",dict:"Dictation sentences",speak:"Pronunciation tries",quick:"Quick reviews",mock:"Mock exams"};
  const due=Object.values(cards()).filter(c=>c.due<=dayStr(1)).length,nv=nextVTopic(curLevel()),ng=nextTopic(curLevel());
  secs($("rv"),[["Done",Object.entries(names).filter(([k])=>L[k]).map(([k,n])=>`${n}: ${L[k]}`)],
   ["New vocabulary",of("vlesson").map(e=>`${e.title}: ${e.words.join(", ")}`)],["Words you wrote correctly ✓",ws(true)],["Words to practice again ✗",ws(false)],
-  ["Grammar",of("glesson").map(e=>e.title)],["Exercise scores",of("vscore").concat(of("gscore")).map(e=>`${e.title}: ${e.s}`)],
+  ["Grammar",of("glesson").map(e=>e.title)],["Exercise scores",of("vscore").concat(of("gscore")).map(e=>`${e.title}: ${e.s}`)],["Reading",of("reading").map(e=>`${e.title}: ${e.s}`)],["Mock exams",of("mock").map(e=>`${e.title}: ${e.s}`)],
   ["Mistakes to review",jget("missed","[]").filter(m=>m.d==d).map(m=>`${m.q} — you: ${m.yours||"(blank)"} — answer: ${m.answer}`)],
   ["Test feedback",of("test").map(e=>e.fb).join("\n\n")],
   ...(d==dayStr()?[["Tomorrow",[`Words due for review: ${due}`,...(nv?[`Next vocabulary topic: ${nv}`]:[]),...(ng?[`Next grammar topic: ${ng}`]:[])]]]:[])]);
@@ -250,25 +305,70 @@ function drawReview(){const d=$("rd").value||dayStr(),J=jget("journal","{}")[d]|
 $("rd").onchange=drawReview;
 
 // account: stats, activity map, word progress, topic paths. Progress is also saved on the server (this is the cloud copy)
-const SYNC=["cards","log","journal","plan","course","lv","plist","gdone","profile","lessons","missed","testmark","sessions"];
+const SYNC=["cards","log","journal","plan","course","lv","plist","gdone","profile","lessons","missed","testmark","sessions","phrases"];
 let synced="",syncMsg="";
 const snap=()=>{const d={};SYNC.forEach(k=>{if(localStorage[k]!=null)d[k]=localStorage[k]});return d};
 async function syncUp(){const d=snap(),j=JSON.stringify(d);if(!Object.keys(d).length||j==synced)return;localStorage._t=Date.now(); // nothing to save (e.g. browser data was cleared): do not claim to be newer
  try{const r=await post("/progress",{data:{...d,_t:localStorage._t}});if(r.error)throw new Error(r.error);synced=j;syncMsg="Progress saved to the server at "+new Date().toLocaleTimeString("en-GB")}
  catch(e){syncMsg="Not saved to the server: "+(e.message||e)}}
-function drawAccount(){const L=jget("log","{}"),act=d=>Object.values(L[d]||{}).reduce((a,b)=>a+b,0),days=Object.keys(L).filter(d=>act(d)).sort();
- let best=0,run=0,cur=0,prev=null;days.forEach(d=>{run=prev&&new Date(d)-new Date(prev)==864e5?run+1:1;best=Math.max(best,run);prev=d});
- for(let i=act(dayStr())?0:1;act(dayStr(-i));i++)cur++;
- $("pname").value=profile().name||"";$("sync").textContent=syncMsg||"Progress is saved to the server automatically.";
- secs($("as"),[["Learning",[`Days learning: ${days.length}${days.length?` (since ${days[0]})`:""}`,`Current streak: ${cur} day(s) · Longest streak: ${best} day(s)`,`Activities in total: ${days.reduce((a,d)=>a+act(d),0)}`]]]);
+const actOf=(L,d)=>Object.values(L[d]||{}).reduce((a,b)=>a+b,0);
+function streakInfo(){const L=jget("log","{}"),days=Object.keys(L).filter(d=>actOf(L,d)).sort();let best=0,run=0,cur=0,prev=null;
+ days.forEach(d=>{run=prev&&new Date(d)-new Date(prev)==864e5?run+1:1;best=Math.max(best,run);prev=d});
+ for(let i=actOf(L,dayStr())?0:1;actOf(L,dayStr(-i));i++)cur++;
+ return{L,days,best,cur,today:actOf(L,dayStr())}}
+const goal=()=>Math.max(1,Math.min(500,+profile().goal||20));
+const saveProfile=o=>{localStorage.profile=JSON.stringify({...profile(),...o})};
+const totals=()=>{const t={};Object.values(jget("log","{}")).forEach(d=>Object.entries(d).forEach(([k,n])=>t[k]=(t[k]||0)+n));return t};
+const BADGES=[["🌱","First day",s=>s.days>=1],["🔥","3-day streak",s=>s.best>=3],["⚡","7-day streak",s=>s.best>=7],["🏆","30-day streak",s=>s.best>=30],
+ ["📘","50 words",s=>s.words>=50],["📗","200 words",s=>s.words>=200],["📚","500 words",s=>s.words>=500],["✏️","First grammar topic",s=>s.gr>=1],["🧠","10 grammar topics",s=>s.gr>=10],
+ ["📝","First test",s=>s.tests>=1],["💬","50 chat messages",s=>s.chat>=50],["📖","First reading",s=>s.reading>=1],["🎤","First pronunciation try",s=>s.speak>=1],["⏱️","First mock exam",s=>s.mock>=1],["🎯","Goal reached",s=>s.goalDays>=1]];
+function drawBadges(){const si=streakInfo(),tt=totals(),st={days:si.days.length,best:si.best,words:Object.keys(cards()).length,gr:Object.keys(gdone()).length,tests:tt.test||0,chat:tt.chat||0,reading:tt.reading||0,speak:tt.speak||0,mock:tt.mock||0,goalDays:si.days.filter(d=>actOf(si.L,d)>=goal()).length};
+ $("bdg").replaceChildren(...BADGES.map(([e,n,f])=>{const ok=f(st),b=el("span",`${e} ${n}`,"bd"+(ok?"":" off"));b.title=ok?"Earned!":"Not yet";return b}))}
+function drawAccount(){const si=streakInfo(),act=d=>actOf(si.L,d),days=si.days,L=si.L;
+ $("pname").value=profile().name||"";$("pgoal").value=goal();$("pron").checked=!!profile().ron;$("prt").value=profile().rtime||"19:00";$("sync").textContent=syncMsg||"Progress is saved to the server automatically.";
+ secs($("as"),[["Learning",[`Days learning: ${days.length}${days.length?` (since ${days[0]})`:""}`,`Current streak: ${si.cur} day(s) · Longest streak: ${si.best} day(s)`,`Activities in total: ${days.reduce((a,d)=>a+act(d),0)}`]]]);
  const dow=(new Date().getDay()+6)%7,hm=$("ah");hm.replaceChildren(); // 20 weeks, Monday first; one square per day
  for(let k=19*7+dow;k>=0;k--){const d=dayStr(-k),n=act(d),c=el("div","","cell "+(n?n<5?"h1":n<10?"h2c":n<20?"h3":"h4":"h0"));c.title=`${d}: ${n} activities`;c.onclick=()=>{$("rd").value=d;go("review")};hm.append(c)}
  const cs=Object.values(cards()),rem=cs.filter(c=>c.box>=3),skp=cs.filter(c=>c.skipped),g=gdone();
  secs($("aw"),[["Words",[`Learnt: ${cs.length}`,`Remembered (written correctly 3 times in a row): ${rem.length}`,`Still learning: ${cs.length-rem.length-skp.length}`,`Skipped: ${skp.length}`]],
   ["Remembered words",rem.map(c=>c.word).join(", ")],["Skipped words (they come back tomorrow)",skp.map(c=>c.word).join(", ")],
   ["Vocabulary topics",Object.keys(VT).map(L=>`${L}: ${VT[L].filter(t=>topicCards(L,t).length).length}/${VT[L].length} topics started · ${VT[L].reduce((a,t)=>a+topicCards(L,t).length,0)} words`)],
-  ["Grammar path",Object.keys(SYLL).map(L=>`${L}: ${SYLL[L].filter(t=>g[L+"|"+t]).length}/${SYLL[L].length} topics`)]])}
-$("pname").onchange=()=>{localStorage.profile=JSON.stringify({name:$("pname").value.trim().slice(0,30)});today()};
+  ["Grammar path",Object.keys(SYLL).map(L=>`${L}: ${SYLL[L].filter(t=>g[L+"|"+t]).length}/${SYLL[L].length} topics`)]]);drawBadges()}
+$("pname").onchange=()=>{saveProfile({name:$("pname").value.trim().slice(0,30)});today()};
+$("pgoal").onchange=()=>{saveProfile({goal:Math.max(1,Math.min(500,+$("pgoal").value||20))});$("pgoal").value=goal();today();drawBadges()};
+$("prt").onchange=()=>saveProfile({rtime:$("prt").value||"19:00"});
+$("pron").onchange=async()=>{const on=$("pron").checked,m=$("pmsgr");saveProfile({ron:on,rtime:$("prt").value||"19:00"});m.textContent="Reminders work only while this page is open in your browser.";
+ if(on&&"Notification" in window){if(Notification.permission=="default")await Notification.requestPermission();if(Notification.permission!="granted")m.textContent="Browser notifications are blocked, so you will see the reminder on the Today page instead."}
+ today()};
+function remindCheck(){const p=profile();if(!p.ron||!p.rtime)return;const n=streakInfo().today;
+ if(new Date().toTimeString().slice(0,5)<p.rtime||localStorage.rnotified==dayStr()||n>=goal())return;
+ localStorage.rnotified=dayStr();
+ if("Notification" in window&&Notification.permission=="granted")new Notification("English Learner 🌸",{body:`Time to learn! You are at ${n}/${goal()} activities today.`});
+ today()}
+// backup: a file you keep yourself (JSON), restore from it, and a CSV of your words
+function download(name,text,type){const a=el("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+$("bdl").onclick=()=>{persist();saveExam();download(`english-learner-progress-${dayStr()}.json`,JSON.stringify({app:"english-learner",v:2,saved:new Date().toISOString(),data:snap()}),"application/json");$("bmsg").textContent="Downloaded. Keep the file somewhere safe."};
+async function restoreText(text){let o,d;
+ try{o=JSON.parse(text);d=o&&o.data;if(o.app!="english-learner"||!d||typeof d!="object"||Array.isArray(d))throw 0;
+  const keys=Object.keys(d);if(!keys.length||keys.some(k=>!SYNC.includes(k)||typeof d[k]!="string"))throw 0;keys.forEach(k=>JSON.parse(d[k]))}
+ catch(e){$("bmsg").textContent="That file is not a valid English Learner backup.";return false}
+ if(!confirm(`Replace your current progress with this backup (saved ${String(o.saved||"").slice(0,10)})? Your current progress will be lost. Tip: download a backup of it first.`))return false;
+ SYNC.forEach(k=>delete localStorage[k]);Object.keys(d).forEach(k=>localStorage[k]=d[k]);localStorage._t=Date.now();
+ const full={};SYNC.forEach(k=>full[k]=d[k]??""); // keys missing from the file are cleared on the server too
+ const r=await post("/progress",{data:{...full,_t:localStorage._t}});if(r.error){$("bmsg").textContent="Restored here, but the server said: "+r.error;return true}
+ $("bmsg").textContent="Restored ✓ Reloading...";setTimeout(()=>location.reload(),600);return true}
+$("bup").onclick=()=>$("bfile").click();
+$("bfile").onchange=async()=>{const f=$("bfile").files[0];$("bfile").value="";if(f)await restoreText(await f.text())};
+const csvCell=v=>{v=String(v??"");if(/^[=+\-@]/.test(v))v="'"+v;return'"'+v.replace(/"/g,'""')+'"'}; // a leading ' stops spreadsheets from running a word as a formula
+$("bcsv").onclick=()=>{const rows=[["word","type","ipa","vietnamese","meaning","example","topic","level","status","next review"]];
+ Object.values(cards()).sort((a,b)=>a.word.localeCompare(b.word)).forEach(c=>rows.push([c.word,c.type,c.ipa,c.vi,c.meaning,c.example,c.topic,c.level,WSTAT(c)[0],c.due]));
+ download("english-learner-words.csv","\ufeff"+rows.map(r=>r.map(csvCell).join(",")).join("\r\n"),"text/csv;charset=utf-8");$("bmsg").textContent=`Exported ${rows.length-1} words.`};
+// cost meter: the server counts tokens; the page shows the estimate
+let usage=null;
+async function refreshUsage(){try{usage=await(await fetch("/usage")).json()}catch(e){return}
+ $("usage").textContent=`This month (${usage.month}): ${usage.calls} AI calls · ${(usage.in/1000).toFixed(1)}k tokens in · ${(usage.out/1000).toFixed(1)}k out ≈ $${usage.cost.toFixed(2)} of $${usage.budget} (${usage.pct}%)`;
+ if($("today").classList.contains("on"))today()}
+let ruT;const refreshUsageSoon=()=>{clearTimeout(ruT);ruT=setTimeout(refreshUsage,1000)}; // not deb(): deb is declared further down
 
 // exercises: 6 kinds. choice/gap/order/match/error are checked here for free; only "write" items go to the AI
 const LABEL={choice:"Choose the correct answer",gap:"Fill the gap",order:"Put the words in order",match:"Match each item",error:"Find the mistake and write the sentence correctly",write:"Write your own answer"};
@@ -304,7 +404,7 @@ async function gradeEx(ct,lv,title,out,fb,key){const{ok,tot,open,wrong,right}=ch
  if(!open.length)return true;
  const r=await ai("grade",{level:lv,title,qa:open.map(o=>o.q+" -> "+(o.v||"(blank)")).join("\n")},out);
  if(r)fb.textContent=(s?s+"\n\n":"")+"Writing feedback:\n"+r;return !!r}
-const say=t=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=$("acc").value;speechSynthesis.speak(u)};
+const say=(t,rate)=>{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang=$("acc").value;if(rate)u.rate=rate;speechSynthesis.speak(u)};
 const spk=t=>{const b=el("button","🔊","sec");b.onclick=()=>say(t);return b};
 
 // level test -> personal practice plan. The level is worked out here from the score; the AI only writes the plan around it
@@ -326,7 +426,7 @@ $("pk").onclick=async()=>{const{res}=checkEx($("pe")),by={},cnt=L=>{const i=pl.m
 
 // settings
 const loadSettings=async()=>{const s=await(await fetch("/settings")).json();
- F.forEach(k=>$(k).value=s[k]);$("ks").textContent=s.key_set?"(saved)":"(not set)";$("ks2").textContent=s.yt_set?"(saved)":"(not set)"};
+ F.forEach(k=>$(k).value=s[k]);$("stt").checked=localStorage.stt==="1";refreshUsage();$("ks").textContent=s.key_set?"(saved)":"(not set)";$("ks2").textContent=s.yt_set?"(saved)":"(not set)"};
 $("g").onclick=()=>{$("s").classList.toggle("open");loadSettings()};
 $("sv").onclick=async()=>{const b={api_key:$("api_key").value,yt_key:$("yt_key").value};F.forEach(k=>b[k]=$(k).value);
  const r=await post("/settings",b);$("api_key").value=$("yt_key").value="";$("st").textContent=r.error||"Saved ✓";if(!r.error)loadSettings()};
@@ -338,7 +438,7 @@ const add=(c,t)=>{$("log").append(el("div",t,"m "+c));$("log").scrollTop=1e9};
 $("mode").onchange=()=>{const m=$("mode").value;hist=[];$("log").replaceChildren();add("a",HINT[m]);$("scn").classList.toggle("hide",m!="roleplay");$("start").classList.toggle("hide",m=="chat")};
 async function send(t,show){if(show)add("u",t);hist.push({role:"user",content:t});hist=hist.slice(-40);
  const r=await post("/chat",{messages:hist,mode:$("mode").value,scenario:$("scn").value,level:$("lv0").value});
- if(r.error){add("e",r.error);hist.pop()}else{add("a",r.reply);hist.push({role:"assistant",content:r.reply});if(show)bump("chat")}}
+ if(r.error){add("e",r.error);hist.pop()}else{add("a",r.reply);hist.push({role:"assistant",content:r.reply});if(show)bump("chat")}refreshUsageSoon()}
 $("start").onclick=()=>{hist=[];$("log").replaceChildren();send("Please start.",false)};
 $("f").onsubmit=e=>{e.preventDefault();const t=$("t").value.trim();if(t){$("t").value="";send(t,true)}};
 $("t").onkeydown=e=>{if(e.key=="Enter"&&!e.shiftKey){e.preventDefault();$("f").requestSubmit()}};
@@ -359,7 +459,7 @@ let vshow=30;
 const WSTAT=c=>c.skipped?["Skipped","skip"]:c.box>=3?["Remembered","rem"]:["Learning","lrn"];
 function wordRow(c){const d=el("div","","wd"),top=el("div","","row"),mid=el("div","","row"),det=el("div","","det hide"),chip=(t,k)=>el("span",t,"chip "+(k||"")),st=WSTAT(c),sp=spk(c.word),ex=el("div","","row");
  sp.onclick=e=>{e.stopPropagation();say(c.word)}; // the row opens and closes on click; the speaker must not do that
- top.append(el("b",c.word,"ww"),el("span",c.ipa||"","ipa"),sp,el("span","","grow"),...(c.due<=dayStr()&&!c.skipped?[chip("Due today","due")]:[]),chip(st[0],st[1]));
+ top.append(el("b",c.word,"ww"),el("span",c.ipa||"","ipa"),sp,el("span","","grow"),...(c.due<=dayStr()&&!c.skipped?[chip("Due today","due")]:[]),chip(st[0],st[1]),...(c.miss?[chip(`missed ${c.miss}×`,"skip")]:[]));
  mid.append(el("span",c.vi,"grow"),...(c.type?[chip(c.type)]:[]),...(c.topic?[chip(c.topic)]:[]));
  if(c.example){const sp2=spk(c.example);sp2.onclick=e=>{e.stopPropagation();say(c.example)};ex.append(el("i","e.g. "+c.example),sp2)}
  det.append(...(c.meaning?[el("div",c.meaning)]:[]),ex,...(c.note?[el("small","💡 "+c.note)]:[]));
@@ -380,7 +480,7 @@ $("vtp").onchange=()=>{updateGo();drawLearned()};
 // study page: one page (under the tab list) for a grammar topic, a vocabulary topic or a card review.
 // Each page saves its state (words, exercises, typed answers, flashcard position), so leaving and coming back continues where you stopped
 const sess=()=>jget("sessions","{}");
-function saveSess(k,v){const s=sess();s[k]={...v,t:Date.now()};Object.keys(s).sort((a,b)=>s[b].t-s[a].t).slice(25).forEach(x=>delete s[x]);localStorage.sessions=JSON.stringify(s)}
+function saveSess(k,v){const s=sess();s[k]={...v,t:Date.now()};Object.keys(s).sort((a,b)=>s[b].t-s[a].t).slice(40).forEach(x=>delete s[x]);localStorage.sessions=JSON.stringify(s)}
 const deb=(fn,ms=300)=>{let t;return()=>{clearTimeout(t);t=setTimeout(fn,ms)}};
 let S={};
 function showStudy(s){if(S.k)persist();s.back=(document.querySelector("nav button.on")||{dataset:{}}).dataset.t||"today";OPEN[s.back]={kind:s.kind,L:s.L,topic:s.topic};S=s;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));$("study").classList.add("on");$("study").scrollTop=0;
@@ -388,7 +488,7 @@ function showStudy(s){if(S.k)persist();s.back=(document.querySelector("nav butto
  $("sex").replaceChildren();$("sex")._list=$("sex")._get=null;$("sst").textContent=$("sst2").textContent=$("sfb").textContent=$("ssc").textContent=""}
 function persist(){if(!S.k||!S.sess)return;const s=S.sess;s.answers=getAns($("sex"));s.acc=[...($("sex")._acc||[])];s.fb=$("sfb").textContent;s.di=di;s.dscore=dscore;saveSess(S.k,s)}
 $("sback").onclick=()=>{persist();const b=S.back||"today";delete OPEN[b];go(b)};
-function reopen(t){const o=OPEN[t];if(o.kind=="grammar")openGrammar(o.topic,o.L);else if(o.kind=="vocab")openVocab(o.topic,o.L);else{delete OPEN[t];$("rvw").click()}}
+function reopen(t){const o=OPEN[t];if(o.kind=="grammar")openGrammar(o.topic,o.L);else if(o.kind=="vocab")openVocab(o.topic,o.L);else delete OPEN[t]} // a card review is not reopened: each card is already saved
 $("sex").addEventListener("input",deb(persist));$("sex").addEventListener("change",deb(persist));
 function drawMissed(){const M=S.k?missedFor(S.k).reverse():[];$("smh").textContent=`What I missed (${M.length})`;$("smc").classList.toggle("hide",!M.length);
  $("smiss").replaceChildren(...M.map(m=>{const d=el("div","","ex");d.append(el("small",m.d+" · "+m.q),el("br"),`Your answer: ${m.yours||"(blank)"}  →  correct: ${m.answer}`);return d}))}
@@ -477,8 +577,8 @@ $("snew").onclick=async()=>{const{kind,L,topic,k}=S;if(!k)return;
 
 // flashcards: write each word from its meaning. Progress is saved (next review after 1,2,4,8,16,32 days)
 const INT=[1,2,4,8,16,32];
-const srs=(w,good)=>{const c=cards(),x=c[w];if(!x)return;x.box=good?Math.min(x.box+1,5):0;if(good)delete x.skipped;x.due=dayStr(INT[x.box]);x.t=Date.now();localStorage.cards=JSON.stringify(c);stats()};
-const skipCard=w=>{const c=cards(),x=c[w];if(!x)return;x.skipped=1;x.box=0;x.due=dayStr(1);x.t=Date.now();localStorage.cards=JSON.stringify(c);stats()};
+const srs=(w,good)=>{const c=cards(),x=c[w];if(!x)return;x.box=good?Math.min(x.box+1,5):0;if(good)delete x.skipped;else x.miss=(x.miss||0)+1;x.due=dayStr(INT[x.box]);x.t=Date.now();localStorage.cards=JSON.stringify(c);stats()};
+const skipCard=w=>{const c=cards(),x=c[w];if(!x)return;x.skipped=1;x.miss=(x.miss||0)+1;x.box=0;x.due=dayStr(1);x.t=Date.now();localStorage.cards=JSON.stringify(c);stats()};
 let dk=[],di=0,dscore=0,dsrc="";
 function deck(list,src,pos,score){dk=list;di=pos||0;dscore=score||0;dsrc=src;$("cd").classList.remove("hide");face()}
 function finish(){$("clabel").textContent="";$("cn").replaceChildren();
@@ -567,8 +667,147 @@ async function search(){const q=$("ps").value.trim();if(!q)return;$("sst3").text
   p.onclick=()=>play(v.id);a.onclick=()=>addList(v.id,v.title);d.append(im,i,p,a);return d}))}
 $("pg").onclick=search;$("ps").onkeydown=e=>e.key=="Enter"&&search();
 
+// ===== word comparison (dictation and pronunciation): which words of the target did you get? =====
+function wordDiff(target,said){const a=norm(target).split(" ").filter(Boolean),b=norm(said).split(" ").filter(Boolean),n=a.length,m=b.length,T=Array.from({length:n+1},()=>Array(m+1).fill(0));
+ for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)T[i][j]=a[i]==b[j]?T[i+1][j+1]+1:Math.max(T[i+1][j],T[i][j+1]);
+ const hit=Array(n).fill(false);let i=0,j=0;while(i<n&&j<m){if(a[i]==b[j]){hit[i]=true;i++;j++}else if(T[i+1][j]>=T[i][j+1])i++;else j++}
+ const got=hit.filter(Boolean).length;return{words:a,hit,got,total:n,extra:m-got,score:n?got/n:0}}
+function diffEl(target,said){const d=wordDiff(target,said),box=el("div");d.words.forEach((w,i)=>box.append(el("span",w,"dw "+(d.hit[i]?"y":"n"))));
+ if(d.extra>0)box.append(el("small",` (+${d.extra} extra word${d.extra==1?"":"s"})`));return{box,d}}
+
+// ===== speech recognition (off until you allow it: the browser sends the audio to its own online service) =====
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function enableStt(){if(localStorage.stt==="1")return true;
+ if(!confirm("Speech recognition uses your browser's online service: Chrome sends the audio to Google and Edge sends it to Microsoft. The audio is not sent to this app or to the AI. Turn it on?"))return false;
+ localStorage.stt="1";$("stt").checked=true;return true}
+$("stt").onchange=()=>{if($("stt").checked){if(!enableStt())$("stt").checked=false}else localStorage.stt="0"};
+function speakCheck(target,out,done){if(!SR){out.textContent="Your browser cannot do speech recognition. Please use Chrome or Edge.";return}
+ if(!enableStt()){out.textContent="Speech recognition is off.";return}
+ const r=new SR();r.lang=$("acc").value;r.interimResults=false;r.maxAlternatives=3;out.textContent="🎤 Listening... say it now";
+ r.onresult=e=>{let best=null,said="";for(const a of e.results[0]){const d=wordDiff(target,a.transcript);if(!best||d.score>best.score){best=d;said=a.transcript}}
+  const pc=Math.round(best.score*100),miss=best.words.filter((w,i)=>!best.hit[i]);
+  out.textContent=`I heard: "${said}"\n${pc}% match. `+(pc>=90?"✓ Great pronunciation!":pc>=60?"Almost! Listen again and try once more.":"Try again. Listen first with 🔊.")+(miss.length&&pc<100?`\nWords to practise: ${miss.join(", ")}`:"");
+  bump("speak");jot("speak",{t:target.slice(0,60),s:pc});done&&done(pc)};
+ r.onerror=e=>{out.textContent=e.error=="not-allowed"||e.error=="service-not-allowed"?"The microphone is blocked. Allow it in your browser (the lock icon near the address bar).":e.error=="no-speech"?"I did not hear anything. Try again.":"Speech recognition problem: "+e.error};
+ try{r.start()}catch(e){out.textContent="Could not start the microphone. Try again."}}
+$("shl").onclick=()=>{const t=$("shs").value.trim();if(t)say(t)};
+$("shm").onclick=()=>{const t=$("shs").value.trim();if(!t){$("sho").textContent="Type the sentence you practised first.";return}speakCheck(t,$("sho"))};
+
+// ===== Practice tab: weak spots, 5-minute review, dictation, pronunciation (no AI, no cost) =====
+const weakCards=()=>Object.values(cards()).filter(c=>(c.miss||0)>0&&c.box<3).sort((a,b)=>(b.miss||0)-(a.miss||0)||a.box-b.box);
+function weakTopics(){const m={};jget("missed","[]").forEach(x=>m[x.k]=(m[x.k]||0)+1);
+ return Object.entries(m).map(([k,n])=>{const[kind,L,topic]=k.split("|");return{kind,L,topic,n}}).filter(x=>x.kind=="grammar"||x.kind=="vocab").sort((a,b)=>b.n-a.n).slice(0,6)}
+function drawWeak(){const wc=weakCards(),wt=weakTopics(),box=$("pweak");box.replaceChildren(el("div","🎯 Your weak spots","h2"));
+ if(!wc.length&&!wt.length){box.append(el("p","Nothing yet. When you make mistakes, they will show here so you can practise them. 🌸"));return}
+ if(wt.length){box.append(el("b","Topics with the most mistakes"));
+  wt.forEach(x=>{const r=el("div","","row"),b=el("button","Study","sec");b.onclick=()=>x.kind=="grammar"?openGrammar(x.topic,x.L):openVocab(x.topic,x.L);
+   r.append(el("span",`${x.kind=="grammar"?"Grammar":"Vocabulary"} ${x.L}: ${x.topic} — ${x.n} mistake${x.n==1?"":"s"}`,"grow"),b);box.append(r)})}
+ if(wc.length){box.append(el("b",`Words you often miss (${wc.length})`));wc.slice(0,10).forEach(c=>box.append(wordRow(c)))}}
+$("pq").onclick=()=>{const seenW=new Set(),pick=[];[...weakCards(),...dueCards()].forEach(c=>{if(pick.length<10&&!seenW.has(c.word)){seenW.add(c.word);pick.push(c)}});
+ if(!pick.length){$("pst2").textContent="No weak or due words right now. Great job! Try a new lesson.";return}
+ $("pst2").textContent="";showStudy({kind:"review",k:"",title:"⚡ 5-minute review"});deck(pick,"review");bump("quick")};
+const pmOpen=()=>{$("pm").classList.remove("hide");$("pm").replaceChildren()};
+let dc={list:[],i:0,ok:0};
+$("pdict").onclick=()=>{const pool=shuffle(Object.values(cards()).filter(c=>c.example&&c.example.split(" ").length>=3));
+ if(!pool.length){$("pst2").textContent="Learn some words first. Dictation uses their example sentences.";return}
+ $("pst2").textContent="";dc={list:pool.slice(0,8),i:0,ok:0};drawDict()};
+function drawDict(){pmOpen();const box=$("pm");
+ if(dc.i>=dc.list.length){box.append(el("div",`Done! ${dc.ok}/${dc.list.length} sentences perfect.`,"big"),el("small","Sentences with mistakes are good to listen to again later."));return}
+ const c=dc.list[dc.i],inp=el("textarea"),res=el("div","","fb"),chk=el("button","Check"),nx=el("button","Next ▶","sec"),r1=el("div","","row"),l1=el("button","🔊 Listen","sec"),l2=el("button","🐢 Slowly","sec");let counted=false;
+ inp.style.minHeight="60px";inp.placeholder="Type the sentence you hear";l1.onclick=()=>say(c.example);l2.onclick=()=>say(c.example,0.6);r1.append(l1,l2);nx.classList.add("hide");
+ chk.onclick=()=>{const{box:b,d}=diffEl(c.example,inp.value),perfect=d.got==d.total&&d.extra==0;
+  res.replaceChildren(b,el("div",`Correct sentence: ${c.example}`),el("small",perfect?"✓ Perfect!":`${d.got}/${d.total} words right`));
+  if(!counted){counted=true;if(perfect)dc.ok++;bump("dict")}nx.classList.remove("hide")};
+ nx.onclick=()=>{dc.i++;drawDict()};
+ box.append(el("small",`Dictation ${dc.i+1}/${dc.list.length}: listen, then type what you hear.`),r1,inp,el("div","","row"),res);box.lastChild.previousSibling.append(chk,nx);say(c.example)}
+let prn={list:[],i:0,mode:"word",sc:[]};
+function pronStart(mode){const cs=shuffle(Object.values(cards()).filter(c=>mode=="word"?c.word:c.example&&c.example.split(" ").length>=3));
+ if(!cs.length){$("pst2").textContent="Learn some words first.";return}$("pst2").textContent="";prn={list:cs.slice(0,8),i:0,mode,sc:[]};drawPron()}
+$("pspk").onclick=()=>pronStart("word");
+function drawPron(){pmOpen();const box=$("pm"),m=el("div","","row"),w=el("button","Words",prn.mode=="word"?"":"sec"),s2=el("button","Sentences",prn.mode=="sent"?"":"sec");
+ w.onclick=()=>pronStart("word");s2.onclick=()=>pronStart("sent");m.append(el("b","🎤 Pronunciation"),w,s2);box.append(m);
+ if(prn.i>=prn.list.length){const avg=prn.sc.length?Math.round(prn.sc.reduce((a,b)=>a+b,0)/prn.sc.length):0;box.append(el("div",`Done! Average match: ${avg}%`,"big"));return}
+ const c=prn.list[prn.i],t=prn.mode=="word"?c.word:c.example,res=el("div","","fb"),r1=el("div","","row"),l1=el("button","🔊 Listen","sec"),l2=el("button","🐢 Slowly","sec"),g=el("button","🎤 Say it"),nx=el("button","Next ▶","sec");
+ l1.onclick=()=>say(t);l2.onclick=()=>say(t,0.6);g.onclick=()=>speakCheck(t,res,pc=>{prn.sc[prn.i]=pc});nx.onclick=()=>{prn.i++;drawPron()};r1.append(l1,l2,g,nx);
+ box.append(el("small",`${prn.i+1}/${prn.list.length}`),el("div",t,"big"),...(prn.mode=="word"&&c.ipa?[el("div",c.ipa,"ipa")]:[]),el("div",c.vi||""),r1,res)}
+
+// ===== Reading: a short business text. Click a word to see its meaning and save it; then questions =====
+let rdg=null;const defCache=new Map();
+const saveRead=()=>rdg&&saveSess("reading",{r:rdg,answers:getAns($("rex")),acc:[...($("rex")._acc||[])],sc:$("rsc").textContent,wf:$("rfb").textContent});
+function regradeRead(){if(!rdg)return;const k=mkKey("reading",rdg.L,"Reading text"),{ok,tot,wrong,right}=checkEx($("rex"));resolveMissed(k,right.map(w=>w.q));addMissed(k,wrong);$("rsc").textContent=`Score: ${ok}/${tot}`;saveRead()}
+function drawRTopics(){const sel=$("rtp"),keep=sel.value;sel.replaceChildren(new Option("Any business topic",""),...(VT[$("lv5").value]||[]).map(t=>new Option(t,t)));
+ sel.value=[...sel.options].some(o=>o.value==keep)?keep:""}
+function showRead(r,answers,acc,sc,wf){rdg=r;$("rt").textContent=r.title||"Reading";const box=$("rtx");box.replaceChildren();
+ r.text.split(/\n{2,}/).forEach(p=>{const d=el("p");p.split(/(\s+)/).forEach(tok=>{if(!tok||/^\s+$/.test(tok)){d.append(tok);return}
+  const m=tok.match(/^([^\p{L}\p{N}']*)([\p{L}\p{N}'’-]+)(.*)$/su);if(!m){d.append(tok);return}
+  const w=el("span",m[2],"rw");w.onclick=()=>lookup(m[2],p);d.append(m[1],w,m[3])});box.append(d)});
+ mkEx($("rex"),r.exercises);const c=$("rex");c._acc=new Map(acc||[]);c._fix=regradeRead;c._lv=()=>r.L;setAns(c,answers);
+ $("rc").classList.remove("hide");$("rdef").classList.add("hide");$("rsc").textContent=sc||"";$("rfb").textContent=wf||"";if(sc)checkEx(c)}
+async function lookup(word,para){const box=$("rdef"),key=word.toLowerCase();box.classList.remove("hide");box.replaceChildren(el("small",`Looking up "${word}"...`));
+ let d=defCache.get(key);
+ if(!d){const sent=(para.match(/[^.!?]+[.!?]?/g)||[para]).find(x=>x.toLowerCase().includes(key))||para,o={textContent:""};
+  d=await ai("define",{level:rdg.L,word,sentence:sent.trim().slice(0,300)},o);if(!d){box.replaceChildren(el("small",o.textContent||"Could not look it up."));return}defCache.set(key,d)}
+ const r1=el("div","","row"),sv=el("button","Save to my words");
+ r1.append(el("b",d.word,"ww"),el("span",[d.ipa,d.pos].filter(Boolean).join(" · "),"ipa"),spk(d.word));
+ sv.onclick=()=>{const c=cards();if(c[d.word]){sv.textContent="Already in your words";sv.disabled=true;return}
+  c[d.word]={...d,level:rdg.L,topic:"Reading",box:0,due:dayStr(1),t:Date.now()};localStorage.cards=JSON.stringify(c);jot("vlesson",{title:"Reading",words:[d.word]});
+  sv.textContent="Saved ✓";sv.disabled=true;drawLearned();stats()};
+ if(cards()[d.word]){sv.textContent="Already in your words";sv.disabled=true}
+ box.replaceChildren(r1,el("div",d.vi,"h2"),el("div",d.meaning),el("i","e.g. "+d.example),el("br"),el("small",d.note?"💡 "+d.note:""),sv)}
+$("rnew").onclick=async()=>{const L=$("lv5").value,r=await ai("reading",{level:L,topic:$("rtp").value,words:Object.values(cards()).sort((a,b)=>b.t-a.t).slice(0,10).map(c=>c.word).join(", ")},$("rst"));
+ if(bad($("rst"),r,"exercises"))return;defCache.clear();showRead({...r,L},[],[],"","");saveRead()};
+$("rck").onclick=async()=>{if(!rdg)return;const k=mkKey("reading",rdg.L,"Reading text"),{ok,tot,open,wrong,right}=checkEx($("rex"));
+ resolveMissed(k,right.map(w=>w.q));addMissed(k,wrong);const sc=`Score: ${ok}/${tot}`;$("rsc").textContent=sc;$("rfb").textContent="";
+ if(!rdg.counted){rdg.counted=1;bump("reading")}jot("reading",{title:rdg.title||"Reading",s:sc});saveRead();
+ if(open.length){const r=await ai("grade",{level:rdg.L,title:rdg.title,qa:open.map(o=>o.q+" -> "+(o.v||"(blank)")).join("\n")+"\nText:\n"+rdg.text.slice(0,1500)},$("rst2"));if(r){$("rfb").textContent="Writing feedback:\n"+r;saveRead()}}};
+const restoreRead=()=>{const t=sess().reading;if(t)showRead(t.r,t.answers,t.acc,t.sc,t.wf)};
+$("rc").addEventListener("input",deb(saveRead));$("rc").addEventListener("change",deb(saveRead));
+
+// ===== Mock exam (Test tab): timed Use of English style test =====
+const MOCK_MIN=20;let mkx=null;
+const mockLeft=()=>mkx?Math.max(0,Math.round((mkx.end-Date.now())/1000)):0;
+function mockTick(){if(!mkx||mkx.done)return;const s=mockLeft();$("mtime").textContent=`⏱ ${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;if(s<=0)mockFinish(true)}
+const saveMock=()=>mkx&&saveSess("mock",{m:mkx,answers:getAns($("mex")),acc:[...($("mex")._acc||[])]});
+function showMock(m,answers,acc){mkx=m;mkEx($("mex"),m.exercises);const c=$("mex");c._acc=new Map(acc||[]);c._fix=regradeMock;c._lv=()=>m.L;setAns(c,answers);
+ $("mc").classList.remove("hide");$("msc").textContent=m.score||"";$("mfb").textContent=m.fb||"";if(m.done){checkEx(c);$("mtime").textContent="Finished"}else mockTick()}
+function mockGrade(){const k=mkKey("mock",mkx.L,"Mock exam"),{ok,tot,wrong,right,res}=checkEx($("mex")),by={},nm={choice:"Multiple choice",gap:"Gap fill and word formation",error:"Error correction"};
+ resolveMissed(k,right.map(w=>w.q));addMissed(k,wrong);mkx.exercises.forEach((x,i)=>{const t=nm[x.type];by[t]=by[t]||[0,0];by[t][1]++;by[t][0]+=res[i]?1:0});
+ const pc=tot?Math.round(100*ok/tot):0;mkx.score=`Score: ${ok}/${tot} (${pc}%)`;
+ mkx.fb=Object.entries(by).map(([t,v])=>`${t}: ${v[0]}/${v[1]}`).join(" · ")+"\n"+(pc>=80?"Excellent! You could try the next level.":pc>=50?"Good. Practise your mistakes (see Practice) and try again.":"Keep practising this level. Look at your mistakes first.");
+ $("msc").textContent=mkx.score;$("mfb").textContent=mkx.fb}
+function mockFinish(auto){if(!mkx||mkx.done)return;mkx.done=true;mockGrade();$("mtime").textContent="Finished";bump("mock");jot("mock",{title:"Mock exam "+mkx.L,s:mkx.score});
+ if(auto){mkx.fb+="\n(Time was up, so your answers were checked automatically.)";$("mfb").textContent=mkx.fb}saveMock()}
+function regradeMock(){if(mkx&&mkx.done){mockGrade();saveMock()}}
+$("mgo").onclick=async()=>{if(mkx&&!mkx.done&&!confirm("A mock exam is still running. Start a new one?"))return;
+ const L=$("lv6").value,r=await ai("mock",{level:L},$("mst"));if(bad($("mst"),r,"exercises"))return;
+ showMock({exercises:r.exercises,L,start:Date.now(),end:Date.now()+MOCK_MIN*60000,done:false},[],[]);saveMock()};
+$("mck").onclick=()=>mockFinish(false);
+const restoreMock=()=>{const t=sess().mock;if(t){showMock(t.m,t.answers,t.acc);if(!t.m.done&&mockLeft()<=0)mockFinish(true)}};
+$("mc").addEventListener("input",deb(saveMock));$("mc").addEventListener("change",deb(saveMock));
+$("tmode").onchange=()=>{$("tprog").classList.toggle("hide",$("tmode").value!="prog");$("tmock").classList.toggle("hide",$("tmode").value!="mock")};
+
+// ===== Phrase bank (Chat tab): suggested phrases you can save, copy and use =====
+const PH_SIT=["Opening an email","Closing an email","Asking for information","Making a polite request","Apologising and fixing a problem","Asking for more time","Making a suggestion in a meeting","Agreeing and disagreeing politely","Starting and ending a meeting","Phone calls: starting and ending","Negotiating price and terms","Following up"];
+const phrases=()=>jget("phrases","[]"),savePh=a=>{localStorage.phrases=JSON.stringify(a.slice(-300))};
+async function copyText(t){try{await navigator.clipboard.writeText(t)}catch(e){const ta=el("textarea");ta.value=t;document.body.append(ta);ta.select();document.execCommand("copy");ta.remove()}}
+function addPhrase(t,c,u){t=String(t).trim().slice(0,200);if(t.length<3)return false;const a=phrases();if(a.some(p=>norm(p.t)==norm(t)))return false;a.push({t,c:c||"My own",u:u||"",d:dayStr()});savePh(a);drawPhrases();return true}
+const copyBtn=t=>{const b=el("button","Copy","sec");b.onclick=async()=>{await copyText(t);b.textContent="Copied ✓";setTimeout(()=>b.textContent="Copy",1200)};return b};
+function drawPhrases(){const a=phrases(),cats=[...new Set(a.map(p=>p.c))],keep=$("phf").value;
+ $("phf").replaceChildren(new Option("All categories",""),...cats.map(c=>new Option(c,c)));$("phf").value=cats.includes(keep)?keep:"";
+ const list=a.filter(p=>!$("phf").value||p.c==$("phf").value).reverse();
+ $("phl").replaceChildren(...(list.length?list.map(p=>{const r=el("div","","row"),us=el("button","Use in chat","sec"),x=el("button","✕","sec"),s2=el("div","","grow");
+  us.onclick=()=>{$("t").value=($("t").value?$("t").value+" ":"")+p.t;$("t").focus()};x.onclick=()=>{savePh(phrases().filter(q=>q.t!=p.t));drawPhrases()};
+  s2.append(el("div",p.t),el("small",p.u?`${p.c} · ${p.u}`:p.c));r.append(s2,copyBtn(p.t),us,x);return r}):[el("p","No saved phrases yet. Ask for suggestions above or add your own.")]))}
+PH_SIT.forEach(x=>$("phs").add(new Option(x)));
+$("phb").onclick=()=>$("phr").classList.toggle("hide");$("phf").onchange=drawPhrases;
+$("phg").onclick=async()=>{const sit=$("phs").value,r=await ai("phrases",{level:$("lv0").value,situation:sit},$("phst"));if(bad($("phst"),r,"items"))return;
+ $("phsug").replaceChildren(...r.items.map(i=>{const row=el("div","","row"),sv=el("button","Save"),s2=el("div","","grow");s2.append(el("div",i.phrase),el("small",i.use));
+  sv.onclick=()=>{sv.textContent=addPhrase(i.phrase,sit,i.use)?"Saved ✓":"Already saved";sv.disabled=true};row.append(s2,copyBtn(i.phrase),sv);return row}))};
+$("pha").onclick=()=>{if(addPhrase($("phn").value,"My own"))$("phn").value=""};
+$("phn").onkeydown=e=>e.key=="Enter"&&$("pha").click();
+
 // start
-drawPl();drawPath();drawVTopics();restoreExam();$("vsz").value=perGroup();$("vsz").onchange=()=>{localStorage.vper=$("vsz").value;if(S.k&&S.kind=="vocab")vocabBtns()};setInterval(tick,1000);tick();ensurePlan();
+drawPl();drawPath();drawVTopics();restoreExam();restoreRead();restoreMock();drawRTopics();drawPhrases();refreshUsage();setInterval(refreshUsage,120000);setInterval(mockTick,1000);setInterval(remindCheck,30000);$("vsz").value=perGroup();$("vsz").onchange=()=>{localStorage.vper=$("vsz").value;if(S.k&&S.kind=="vocab")vocabBtns()};setInterval(tick,1000);tick();ensurePlan();
 synced=Object.keys(SP).length&&!LOCAL_NEWER?JSON.stringify(snap()):""; // nothing on the server yet: the first sync uploads this browser's progress
-setInterval(syncUp,3000);addEventListener("pagehide",()=>{persist();saveExam();const d=snap();if(Object.keys(d).length&&JSON.stringify(d)!=synced){localStorage._t=Date.now();navigator.sendBeacon("/progress",JSON.stringify({data:{...d,_t:localStorage._t}}))}});
+setInterval(syncUp,3000);addEventListener("pagehide",()=>{persist();saveExam();saveRead();saveMock();const d=snap();if(Object.keys(d).length&&JSON.stringify(d)!=synced){localStorage._t=Date.now();navigator.sendBeacon("/progress",JSON.stringify({data:{...d,_t:localStorage._t}}))}});
 </script>
