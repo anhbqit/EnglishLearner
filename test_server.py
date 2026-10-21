@@ -114,6 +114,14 @@ try:
     post("/progress", {"data": {"lv": "B1", "missed": "[]", "lessons": "{}", "testmark": "null", "sessions": "{}", "_t": "123"}})
     p = page()
     assert "x</script>" not in p and "x\\u003c/script>" in p and '"lv": "B1"' in p and '"cards"' in p
+    # a daily backup of the previous version, and only the last 7 are kept
+    baks = lambda: sorted(x for x in os.listdir(server.DATA) if x.startswith("local.") and x.endswith(".bak"))
+    assert len(baks()) == 1 and json.load(open(os.path.join(server.DATA, baks()[0])))["cards"] == '{"a":1}'
+    for i in range(1, 10): open(os.path.join(server.DATA, f"local.2020-01-0{i}.bak"), "w").write("{}")
+    open(os.path.join(server.DATA, "locale.2020-01-01.bak"), "w").write("{}")  # another user's file is never touched
+    post("/progress", {"data": {"lv": "B2"}})
+    assert len(baks()) == 7 and baks()[-1].startswith("local.20") and os.path.exists(os.path.join(server.DATA, "locale.2020-01-01.bak"))
+    post("/progress", {"data": {"lv": "B1"}})
     for bad in ({"evil": "x"}, {"cards": 5}, {"bk": "x"}): err(lambda: post("/progress", {"data": bad}), "Bad progress")
     err(lambda: post("/progress", {}), "Bad progress")
     server.AUTH = "pw"

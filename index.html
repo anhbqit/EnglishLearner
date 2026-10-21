@@ -31,6 +31,9 @@ nav button.due{border-color:#e0679a;animation:pulse 1.6s infinite}nav button.due
 #s{display:none;width:300px;background:#fff;padding:16px;border-left:1px solid #eadde3;overflow:auto}
 #s.open{display:block}#s label{display:block;margin-top:10px;font-size:14px}#s input,#s select{width:100%;box-sizing:border-box}
 small,a{color:#777}
+.wd{background:#fff;border:1px solid #eadde3;border-radius:12px;padding:8px 12px;margin:6px 0;cursor:pointer}.wd:hover{border-color:#e0679a}
+.wd .row{margin:2px 0}.ww{font-size:18px}.ipa{color:#777}.wd button{padding:2px 8px}.wd .det{margin-top:6px;padding-top:6px;border-top:1px dashed #eadde3}
+.chip{font-size:12px;padding:2px 9px;border-radius:999px;background:#f3eaee;color:#6b4a5a}.chip.rem{background:#e0f4e8;color:#1f7a45}.chip.lrn{background:#fde0ec;color:#a3295f}.chip.skip{background:#fff1d6;color:#8a5a00}.chip.due{background:#fff;border:1px solid #e0679a;color:#a3295f}
 .sticky{position:sticky;bottom:0;background:#fdf6f9;padding:10px 0;margin:0;border-top:1px solid #eadde3;z-index:2}
 </style>
 <main><header>English Learner 🌸 <button type=button id=g>Settings</button></header>
@@ -70,7 +73,11 @@ small,a{color:#777}
 <div class=row><select class=lv id=lv1></select><select id=acc><option value=en-US>American voice<option value=en-GB>British voice</select></div>
 <small>Choose a topic. The number shows how many words you have learned in it. Every time you open a topic, the AI writes new words, so a topic never runs out.</small>
 <div class=row><select id=vtp class=grow></select><select id=vsz title="Words in each of the 5 groups"><option value=4>4 words per group<option value=6>6 words per group<option value=8>8 words per group</select><button id=vgo>Learn new words</button></div>
-<details id=vlw><summary id=vlws></summary><input id=vsr class=w100 placeholder="Search all my learned words (English or Vietnamese)" autocomplete=off><div id=vlwl></div></details>
+<div class=card id=vlw><b id=vlws class=h2></b>
+<div class=row><input id=vsr class=grow placeholder="🔎 Search my words (English or Vietnamese)" autocomplete=off>
+<select id=vfl title="Which words to show"><option value=topic>This topic<option value=all>All topics<option value=due>Due for review<option value=rem>Remembered<option value=skip>Skipped</select>
+<select id=vso title="Order"><option value=new>Newest first<option value=az>A to Z</select></div>
+<small id=vlwn></small><div id=vlwl></div><div class=row><button id=vmore class="sec hide">Show more</button></div></div>
 <div class=row><button id=rvw class=sec>Review due words</button><small id=cst></small></div><small id=st1></small></section>
 
 <section class=tab id=grammar>
@@ -348,12 +355,25 @@ function drawVTopics(){const L=$("lv1").value,sel=$("vtp"),keep=sel.value;
  sel.replaceChildren(...(VT[L]||[]).map(t=>{const n=topicCards(L,t).length;return new Option(`${t} — ${n} word${n==1?"":"s"} learned`,t)}));
  sel.value=VT[L].includes(keep)?keep:nextVTopic(L)||VT[L][0];updateGo();drawLearned()}
 const fold=x=>String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/đ/g,"d"); // search ignores capitals and Vietnamese accents
-function drawLearned(){const L=$("lv1").value,t=$("vtp").value,q=fold($("vsr").value.trim()),all=Object.values(cards()).sort((a,b)=>b.t-a.t),
- mine=all.filter(c=>c.level==L&&c.topic==t),list=q?all.filter(c=>fold([c.word,c.vi,c.meaning].filter(Boolean).join(" ")).includes(q)):mine;
- $("vlws").textContent=q?`Search results: ${list.length} of ${all.length} learned words`:`Words I learned in this topic: ${mine.length} · in total: ${all.length}`;
- $("vlwl").replaceChildren(...list.slice(0,200).map(c=>el("div",`${c.word} – ${c.vi}`+(q&&c.topic?` · ${c.topic} (${c.level})`:""))),...(list.length>200?[el("small",`+${list.length-200} more. Type more letters to narrow it down.`)]:[]));
- if(q)$("vlw").open=true}
-$("vsr").oninput=drawLearned;
+let vshow=30;
+const WSTAT=c=>c.skipped?["Skipped","skip"]:c.box>=3?["Remembered","rem"]:["Learning","lrn"];
+function wordRow(c){const d=el("div","","wd"),top=el("div","","row"),mid=el("div","","row"),det=el("div","","det hide"),chip=(t,k)=>el("span",t,"chip "+(k||"")),st=WSTAT(c),sp=spk(c.word),ex=el("div","","row");
+ sp.onclick=e=>{e.stopPropagation();say(c.word)}; // the row opens and closes on click; the speaker must not do that
+ top.append(el("b",c.word,"ww"),el("span",c.ipa||"","ipa"),sp,el("span","","grow"),...(c.due<=dayStr()&&!c.skipped?[chip("Due today","due")]:[]),chip(st[0],st[1]));
+ mid.append(el("span",c.vi,"grow"),...(c.type?[chip(c.type)]:[]),...(c.topic?[chip(c.topic)]:[]));
+ if(c.example){const sp2=spk(c.example);sp2.onclick=e=>{e.stopPropagation();say(c.example)};ex.append(el("i","e.g. "+c.example),sp2)}
+ det.append(...(c.meaning?[el("div",c.meaning)]:[]),ex,...(c.note?[el("small","💡 "+c.note)]:[]));
+ d.append(top,mid,det);d.onclick=()=>det.classList.toggle("hide");return d}
+function drawLearned(){const L=$("lv1").value,t=$("vtp").value,q=fold($("vsr").value.trim()),f=$("vfl").value,td=dayStr(),all=Object.values(cards());
+ let list=f=="topic"&&!q?all.filter(c=>c.level==L&&c.topic==t):f=="due"?all.filter(c=>c.due<=td&&!c.skipped):f=="rem"?all.filter(c=>c.box>=3&&!c.skipped):f=="skip"?all.filter(c=>c.skipped):all;
+ if(q)list=list.filter(c=>fold([c.word,c.vi,c.meaning].filter(Boolean).join(" ")).includes(q));
+ list=list.sort($("vso").value=="az"?(a,b)=>a.word.localeCompare(b.word):(a,b)=>b.t-a.t);
+ $("vlws").textContent=`📚 My words: ${all.length} learned`;
+ $("vlwn").textContent=all.length?`${list.length} word${list.length==1?"":"s"} · ${q?"searching all topics":f=="topic"?"topic: "+t:$("vfl").selectedOptions[0].textContent.toLowerCase()} · click a word to see its example`:"";
+ $("vlwl").replaceChildren(...(list.length?list.slice(0,vshow).map(wordRow):[el("p",all.length?"No words match. Try another word or filter.":"No words yet. Click \"Learn new words\" to start your first lesson!")]));
+ $("vmore").classList.toggle("hide",list.length<=vshow);if(list.length>vshow)$("vmore").textContent=`Show more (${list.length-vshow} left)`}
+const redrawWords=()=>{vshow=30;drawLearned()};
+$("vsr").oninput=redrawWords;$("vfl").onchange=redrawWords;$("vso").onchange=redrawWords;$("vmore").onclick=()=>{vshow+=30;drawLearned()};
 $("vgo").onclick=()=>openVocab($("vtp").value,$("lv1").value,true); // opening a topic = a new lesson with new words (an unfinished lesson is continued)
 $("vtp").onchange=()=>{updateGo();drawLearned()};
 

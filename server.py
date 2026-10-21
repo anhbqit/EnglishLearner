@@ -1,6 +1,6 @@
 """English Learner web. Stdlib only. Run: python server.py -> http://127.0.0.1:8000
 Provider "anthropic", or "openai" (any OpenAI-compatible: Gemini, Groq, OpenRouter)."""
-import base64, hmac, html, json, os, re, threading, time, urllib.error, urllib.parse, urllib.request
+import base64, hmac, html, json, os, re, shutil, threading, time, urllib.error, urllib.parse, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 DIR = os.path.dirname(os.path.abspath(__file__))
@@ -227,6 +227,15 @@ def load_progress(uid):
     try: return json.load(open(progress_file(uid), encoding="utf-8"))
     except (OSError, ValueError): return {}
 
+def backup_progress(uid):
+    """Once a day, keep a copy of the saved progress (the last 7 days), so one bad save can be undone."""
+    f = progress_file(uid)
+    if not os.path.exists(f): return
+    b = f[:-5] + time.strftime(".%Y-%m-%d.bak")
+    if not os.path.exists(b): shutil.copy2(f, b)
+    mine = os.path.basename(f)[:-5] + "."
+    for old in sorted(x for x in os.listdir(DATA) if x.startswith(mine) and x.endswith(".bak"))[:-7]: os.remove(os.path.join(DATA, old))
+
 def save_progress(uid, d):
     """shortcut: one JSON file per user, last write wins; move to a database (same two functions) when many users or devices."""
     data = d.get("data")
@@ -234,6 +243,7 @@ def save_progress(uid, d):
             or sum(map(len, data.values())) > 5_000_000): raise ValueError("Bad progress data.")
     with LOCK:
         os.makedirs(DATA, exist_ok=True)
+        backup_progress(uid)
         tmp = progress_file(uid) + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f: json.dump({**load_progress(uid), **data}, f)
         os.replace(tmp, progress_file(uid))  # atomic: a crash never leaves a half-written file
