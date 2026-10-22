@@ -755,17 +755,20 @@ function showRead(r,answers,acc,sc,wf){rdg=r;$("rt").textContent=r.title||"Readi
   const w=el("span",m[2],"rw");w.onclick=()=>lookup(m[2],p);d.append(m[1],w,m[3])});box.append(d)});
  mkEx($("rex"),r.exercises);const c=$("rex");c._acc=new Map(acc||[]);c._fix=regradeRead;c._lv=()=>r.L;setAns(c,answers);
  $("rc").classList.remove("hide");$("rdef").classList.add("hide");$("rsc").textContent=sc||"";$("rfb").textContent=wf||"";if(sc)checkEx(c)}
-async function lookup(word,para){const box=$("rdef"),key=word.toLowerCase();box.classList.remove("hide");box.replaceChildren(el("small",`Looking up "${word}"...`));
- let d=defCache.get(key);
+async function lookup(word,para,fresh){const box=$("rdef"),key=word.toLowerCase();box.classList.remove("hide");box.replaceChildren(el("small",`Looking up "${word}"...`));
+ const mine=Object.values(cards()).find(c=>wkey(c.word)==wkey(word));
+ let d=fresh?null:mine?{...mine,src:"From your words"}:defCache.get(key);
  if(!d){const sent=(para.match(/[^.!?]+[.!?]?/g)||[para]).find(x=>x.toLowerCase().includes(key))||para,o={textContent:""};
-  d=await ai("define",{level:rdg.L,word,sentence:sent.trim().slice(0,300)},o);if(!d){box.replaceChildren(el("small",o.textContent||"Could not look it up."));return}defCache.set(key,d)}
+  d=await ai("define",{level:rdg.L,word,sentence:sent.trim().slice(0,300),fresh:fresh?1:0},o);if(!d){box.replaceChildren(el("small",o.textContent||"Could not look it up."));return}
+  d={...d,src:d.cached?"⚡ From the dictionary (no AI cost)":"New: explained by the AI and saved to the dictionary"};defCache.set(key,d)}
  const r1=el("div","","row"),sv=el("button","Save to my words");
  r1.append(el("b",d.word,"ww"),el("span",[d.ipa,d.pos].filter(Boolean).join(" · "),"ipa"),spk(d.word));
  sv.onclick=()=>{const c=cards();if(c[d.word]){sv.textContent="Already in your words";sv.disabled=true;return}
-  c[d.word]={...d,level:rdg.L,topic:"Reading",box:0,due:dayStr(1),t:Date.now()};localStorage.cards=JSON.stringify(c);jot("vlesson",{title:"Reading",words:[d.word]});
+  const{src,cached,...w}=d;c[d.word]={...w,level:rdg.L,topic:"Reading",box:0,due:dayStr(1),t:Date.now()};localStorage.cards=JSON.stringify(c);jot("vlesson",{title:"Reading",words:[d.word]});
   sv.textContent="Saved ✓";sv.disabled=true;drawLearned();stats()};
  if(cards()[d.word]){sv.textContent="Already in your words";sv.disabled=true}
- box.replaceChildren(r1,el("div",d.vi,"h2"),el("div",d.meaning),el("i","e.g. "+d.example),el("br"),el("small",d.note?"💡 "+d.note:""),sv)}
+ const again=el("button","Ask AI for this sentence","sec");again.title="A word can have different meanings. Use this if the meaning does not fit here.";again.onclick=()=>lookup(word,para,true);
+ box.replaceChildren(r1,el("div",d.vi,"h2"),el("div",d.meaning),el("i","e.g. "+d.example),el("br"),el("small",d.note?"💡 "+d.note:""),el("div",d.src||"","muted"),el("div","","row"));box.lastChild.append(sv,again)}
 $("rnew").onclick=async()=>{const L=$("lv5").value,r=await ai("reading",{level:L,topic:$("rtp").value,words:Object.values(cards()).sort((a,b)=>b.t-a.t).slice(0,10).map(c=>c.word).join(", ")},$("rst"));
  if(bad($("rst"),r,"exercises"))return;defCache.clear();showRead({...r,L},[],[],"","");saveRead()};
 $("rck").onclick=async()=>{if(!rdg)return;const k=mkKey("reading",rdg.L,"Reading text"),{ok,tot,open,wrong,right}=checkEx($("rex"));

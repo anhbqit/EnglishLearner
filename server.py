@@ -183,6 +183,47 @@ def clean_course(r):
     if len(units) < 3: raise ValueError(INCOMPLETE)
     return {"summary": s(r.get("summary", ""), 400), "strengths": lst("strengths"), "weak": lst("weak"), "units": units[:12]}
 
+# ---- shared dictionary: every meaning the AI writes is kept on the server, so the next lookup of that word needs no AI call.
+# Only dictionary facts are stored (word, IPA, meanings, example): nothing about the user.
+DICT_MAX = 20000
+DICT_FIELDS = ("word", "ipa", "pos", "vi", "meaning", "example", "note")
+_dict = {"path": None, "words": {}}
+
+def dict_file(): return os.path.join(DATA, "shared-dictionary.json")  # a "-" can never come from progress_file(), so no user can overwrite it
+
+def dict_key(w):
+    w = re.sub(r"\s+", " ", str(w).lower().replace("\u2019", "'")).strip(" .,;:!?\"()")
+    return w[3:] if w.startswith("to ") else w
+
+def dict_words():
+    if _dict["path"] != dict_file():  # loaded once, then kept in memory
+        try: words = json.load(open(dict_file(), encoding="utf-8"))
+        except (OSError, ValueError): words = {}
+        _dict.update(path=dict_file(), words=words if isinstance(words, dict) else {})
+    return _dict["words"]
+
+def dict_get(w):
+    e = dict_words().get(dict_key(w))
+    return {k: e.get(k, "") for k in DICT_FIELDS} if isinstance(e, dict) else None
+
+def dict_put(entries, also=()):
+    """Save word entries; `also` = extra spellings that point to the first entry (e.g. "meetings" -> "meeting")."""
+    try:
+        with LOCK:
+            words, now = dict_words(), time.time()
+            for i, e in enumerate(entries):
+                if not isinstance(e, dict) or not str(e.get("word", "")).strip() or not str(e.get("vi", "")).strip(): continue
+                item = {**{k: str(e.get(k, ""))[:200] for k in DICT_FIELDS}, "t": now}
+                for k in {dict_key(e["word"]), *(map(dict_key, also) if i == 0 else ())}:
+                    if 0 < len(k) <= 60: words[k] = item
+            if len(words) > DICT_MAX:  # drop the oldest
+                for k in sorted(words, key=lambda k: words[k].get("t", 0))[:len(words) - DICT_MAX]: del words[k]
+            os.makedirs(DATA, exist_ok=True)
+            # shortcut: rewrites the whole file on each new word (fine up to ~20k words); use a database when this is on the cloud with many users
+            with open(dict_file() + ".tmp", "w", encoding="utf-8") as f: json.dump(words, f, ensure_ascii=False)
+            os.replace(dict_file() + ".tmp", dict_file())
+    except OSError: pass  # the dictionary is a speed-up: a failed save must never break a lesson
+
 # ---- AI tasks
 def run_task(task, d):
     lv = d.get("level", "A1")
@@ -199,7 +240,9 @@ def run_task(task, d):
                '"vi":"short Vietnamese meaning","meaning":"simple English meaning","example":"one short sentence that contains the word exactly as written",'
                '"note":"short tip: collocation or common mistake"}],' + ex_spec(10) + "}.", 4000, "{", "}")
         r["words"] = [w for w in map(clean_word, r.get("words") if isinstance(r.get("words"), list) else []) if w]
-        return clean_lesson(r, ("title", "words"))
+        r = clean_lesson(r, ("title", "words"))
+        dict_put(r["words"])
+        return r
     if task == "grammar":
         return clean_lesson(js(f"CEFR level {lv}. Topic: {g('topic') or 'common for this level'}. "
                "Teach ONE grammar point simply. Return JSON "
@@ -226,9 +269,15 @@ def run_task(task, d):
                '{"type":"choice","q":"a question about the text","options":["a","b","c"],"answer":"b"} (each has exactly ONE correct answer; check twice), '
                'then 1 item {"type":"write","q":"Summarise the text in one sentence."}]}.', 1800, "{", "}"))
     if task == "define":
-        return clean_define(js(f"CEFR level {lv}. Explain the English word '{g('word')[:40]}' as it is used in this sentence: {g('sentence')[:300]}. Return JSON "
+        word = g("word")[:40]
+        if not word.strip(): raise ValueError("Bad request")
+        hit = None if d.get("fresh") else dict_get(word)  # fresh = "ask the AI for this sentence" (a word can mean different things)
+        if hit: return {**hit, "type": "topic word", "cached": True}
+        r = clean_define(js(f"CEFR level {lv}. Explain the English word '{g('word')[:40]}' as it is used in this sentence: {g('sentence')[:300]}. Return JSON "
                '{"word":"the base form of the word","ipa":"/IPA/","pos":"noun/verb/adjective/...","vi":"short Vietnamese meaning in this context",'
                '"meaning":"simple English meaning","example":"a new short example sentence with the word","note":"short tip: collocation or common mistake"}.', 400, "{", "}"))
+        dict_put([r], also=[word])
+        return r
     if task == "phrases":
         return clean_phrases(js(f"CEFR level {lv}. Give 8 useful English phrases for this Business English situation: {g('situation')[:100]}. "
                "Natural and polite, each short enough to copy into an email or say in a meeting (use [name] or [date] only where needed). Return JSON "

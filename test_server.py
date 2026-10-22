@@ -105,6 +105,31 @@ try:
     r = server.run_task("mock", {"level": "B2"}); assert len(r["exercises"]) == 13 and {e["type"] for e in r["exercises"]} == {"choice", "gap", "error"} and "15 items" in seen[-1]
     server.ask = fake(json.dumps({"exercises": mk[:8]})); err(lambda: server.run_task("mock", {"level": "B2"}), "incomplete")
 
+    # shared dictionary: a word is explained by the AI once, then comes from the server file
+    if os.path.exists(server.dict_file()): os.remove(server.dict_file())  # earlier tests already looked up "meeting"
+    server._dict["path"] = None
+    calls = []
+    def dfake(m, system=None, max_tokens=None):
+        calls.append(m[0]["content"]); return json.dumps({"word": "meeting", "ipa": "/m/", "pos": "noun", "vi": "cuộc họp", "meaning": "m", "example": "e", "note": "n"})
+    server.ask = dfake
+    r1 = server.run_task("define", {"level": "B1", "word": "meetings", "sentence": "Two meetings."})
+    r2 = server.run_task("define", {"level": "B1", "word": "Meetings,", "sentence": "x"})
+    r3 = server.run_task("define", {"level": "B1", "word": "meeting", "sentence": "x"})
+    assert len(calls) == 1 and "cached" not in r1 and r2["cached"] and r3["vi"] == "cuộc họp" and r3["type"] == "topic word"
+    server.run_task("define", {"level": "B1", "word": "meeting", "sentence": "x", "fresh": 1}); assert len(calls) == 2  # "ask AI for this sentence"
+    err(lambda: server.run_task("define", {"level": "B1", "word": " "}), "Bad request")
+    server._dict["path"] = None  # reload from disk: it survives a restart
+    assert server.dict_get("MEETINGS")["vi"] == "cuộc họp" and server.dict_get("unknown") is None and server.dict_key("To Run ") == "run"
+    server.ask = fake(json.dumps({"title": "T", "words": [{"word": "to negotiate", "type": "topic word", "vi": "đàm phán"}, {"word": "bad", "vi": ""}],
+                                  "exercises": [{"type": "gap", "q": "a ___", "answer": "x"}]}))
+    server.run_task("vocab", {"level": "B1", "topic": "x"}); assert server.dict_get("negotiate")["vi"] == "đàm phán" and server.dict_get("bad") is None
+    old = server.DICT_MAX; server.DICT_MAX = 3
+    for i in range(5): server.dict_put([{"word": f"w{i}", "vi": "v"}])
+    assert len(server.dict_words()) == 3 and server.dict_get("w4") and not server.dict_get("w0")
+    server.DICT_MAX = old
+    open(server.dict_file(), "w").write("{broken"); server._dict["path"] = None; assert server.dict_words() == {}  # a broken file = empty dictionary, no crash
+    assert server.progress_file("shared-dictionary") != server.dict_file()
+
     # level test and practice plan
     pit = lambda lv, sk="grammar": {"level": lv, "skill": sk, "type": "choice", "q": "q ___", "options": ["a", "b"], "answer": "a"}
     items = [pit(l) for l in ("B1", "A1", "A2", "A1")] + [pit("C2", "vocab"), pit("B2"), {**pit("A1"), "skill": "x"},
