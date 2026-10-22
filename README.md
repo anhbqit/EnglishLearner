@@ -9,7 +9,22 @@ Privacy: do not type personal info; Anthropic keeps API data ~30 days.
 Test: `python test_server.py`
 
 ## Progress and cloud
-- Progress (words, grammar path, activity, course) is saved on the server in `data/<user>.json` and also cached in the browser. The server copy wins when the page loads.
-- Run on a cloud host: set `HOST=0.0.0.0`, `PORT` (if the host gives one) and `APP_PASSWORD`. The app refuses to start on a public address without a password. The browser then asks for a login: any user name, that password. The user name picks the progress file.
-- Keep `data/`, `.env` and `.ytkey` on a persistent disk. Use HTTPS (the host usually provides it).
-- Not done yet for many users: separate passwords per user, separate API keys/limits per user, and a database instead of files.
+- Progress (words, grammar path, activity, course, story, habits) is saved on the server in `data/<user>.json` and cached in the browser. The server copy wins when the page loads. A copy of each file is kept every day for 7 days.
+- `data/shared-dictionary.json` keeps every word meaning the AI has written (no personal data), so repeat lookups cost nothing.
+
+## Running it online (production)
+Set these environment variables on the host:
+
+| Variable | What it does |
+|---|---|
+| `HOST=0.0.0.0`, `PORT` | Listen on the public address (`PORT` if the host gives one). |
+| `APP_USERS=daisy:pass1,minh:pass2` | One password per person (recommended). The login name picks the progress file. |
+| `APP_PASSWORD` | Instead of `APP_USERS`: one shared password, any login name. Anyone with it can open any name's progress. |
+| `ADMIN_USER=daisy` | Only this login may change Settings (API key, model, budget). Without it, nobody can change Settings online. |
+| `AI_DAILY_LIMIT=500` | Max AI requests per person per day (default 500). |
+
+- The app refuses to start on a public address without `APP_USERS` or `APP_PASSWORD`.
+- Use HTTPS (the host usually provides it): the login is sent with every request.
+- Keep `data/`, `.env`, `.ytkey`, `config.json` and `usage.json` on a persistent disk.
+- Auto-restart on code changes only runs on your own computer (`127.0.0.1`).
+- Not done yet for many users: separate API keys or budgets per person, and a database instead of files.

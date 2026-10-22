@@ -6,27 +6,32 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 DIR = os.path.dirname(os.path.abspath(__file__))
 CFG_FILE, ENV_FILE, YT_FILE = (os.path.join(DIR, f) for f in ("config.json", ".env", ".ytkey"))
 DATA = os.path.join(DIR, "data")  # one progress file per user, git-ignored
-PROGRESS = ("cards", "log", "journal", "plan", "course", "lv", "plist", "gdone", "profile", "lessons", "missed", "testmark", "sessions", "phrases", "_t")  # _t: when the browser last changed something
+PROGRESS = ("cards", "log", "journal", "plan", "course", "lv", "plist", "gdone", "profile", "lessons", "missed", "testmark", "sessions", "phrases", "habits", "story", "_t")  # _t: when the browser last changed something
 HOST, PORT = os.environ.get("HOST", "127.0.0.1"), int(os.environ.get("PORT", 8000))
-AUTH = os.environ.get("APP_PASSWORD", "")  # cloud: set it. The browser then asks for a login; the login name picks the progress file
+AUTH = os.environ.get("APP_PASSWORD", "")  # cloud: one shared password; the login name picks the progress file
+USERS = dict(x.strip().split(":", 1) for x in os.environ.get("APP_USERS", "").split(",") if ":" in x)  # cloud, better: "daisy:pass1,minh:pass2" = one password per person
+ADMIN = os.environ.get("ADMIN_USER", "local")  # who may change Settings (API key, model, budget). Without a login everyone is "local"
+AI_LIMIT = int(os.environ.get("AI_DAILY_LIMIT", 500))  # AI requests per person per day: a guard against runaway costs
 LOCK = threading.Lock()
 KEYS = ("provider", "model", "base_url", "history_turns", "max_tokens")
 NUM_KEYS = ("budget", "price_in", "price_out")  # budget in $ per month; prices in $ per million tokens (you can change them: providers change prices)
 DEFAULTS = {"budget": 5.0, "price_in": 1.0, "price_out": 5.0}
 USAGE_FILE = os.path.join(DIR, "usage.json")  # token counts per month, git-ignored
 LEVELS = ("A1", "A2", "B1", "B2", "C1", "C2")
-SYSTEM = ("You are a friendly English tutor for a first-year Business English student. "
+SYSTEM = ("You are a friendly English tutor for a Vietnamese learner of English. "
           "Reply in English only, short and simple. If the student's message has mistakes, "
           "first give the corrected sentence, then explain each mistake in one simple line. "
           "If it is correct, say so, then reply naturally and ask one short follow-up question.")
-JSON_SYS = "You write English-learning material for a Vietnamese Business English student. Reply with ONLY valid JSON, no markdown."
+JSON_SYS = "You write English-learning material for a Vietnamese learner of English. Reply with ONLY valid JSON, no markdown."
+FOCUS = {"general": "everyday life", "work": "work and business", "study": "university study and exams", "travel": "travel and daily life abroad"}
 SCEN = {"interview": "an interviewer in a job interview for an office job", "meeting": "a colleague in a team meeting",
         "customer": "an unhappy customer calling support", "supplier": "a supplier negotiating price and delivery",
-        "smalltalk": "a new coworker making small talk"}
-EMAIL = ("You are a friendly Business English email coach. Reply in English only, short and simple. If the student says "
-         "'Please start', give one short realistic work-email task (2-3 lines: who to write to and why). Otherwise the student "
+        "smalltalk": "a new coworker making small talk", "friend": "a new friend chatting at a cafe", "shop": "a shop assistant helping a customer",
+        "hotel": "a hotel receptionist at check-in", "doctor": "a doctor talking to a patient", "lecturer": "a university lecturer in office hours"}
+EMAIL = ("You are a friendly English email coach. Reply in English only, short and simple. If the student says "
+         "'Please start', give one short realistic email task that fits the student's interests (2-3 lines: who to write to and why). Otherwise the student "
          "wrote an email: show an improved version, then 3 short tips (tone, grammar, format).")
-ROLE = ("You are {who} in a role-play with a Business English student. Stay in character. Reply in English only, in 1-3 short "
+ROLE = ("You are {who} in a role-play with a learner of English. Stay in character. Reply in English only, in 1-3 short "
         "simple sentences, and end with one question. If the student says 'Please start', open the scene. After your reply, "
         "if the student's last message had mistakes, add a new line starting 'Tip:' with the corrected sentence and a one-line reason.")
 
@@ -35,7 +40,22 @@ def read_key(path, env): return open(path).read().strip() if os.path.exists(path
 def get_key(): return read_key(ENV_FILE, "LLM_API_KEY")
 def get_ytkey(): return read_key(YT_FILE, "YT_API_KEY")
 
-def trim(history, turns): return history[-2 * turns:]  # one turn = user + assistant
+def trim(history, turns):
+    h = history[-2 * turns:]  # one turn = user + assistant
+    while h and h[0].get("role") != "user": h = h[1:]  # the provider needs the user's message first
+    return h
+
+def focus_text(d):
+    f = [FOCUS[x] for x in (d.get("focus") if isinstance(d.get("focus"), list) else []) if isinstance(x, str) and x in FOCUS]
+    return ", ".join(dict.fromkeys(f)) or FOCUS["general"]
+
+_calls = {}
+def count_call(uid):
+    day = time.strftime("%Y-%m-%d")
+    with LOCK:
+        for old in [k for k in _calls if k[1] != day]: del _calls[old]
+        _calls[uid, day] = _calls.get((uid, day), 0) + 1
+        if _calls[uid, day] > AI_LIMIT: raise ValueError("Daily AI limit reached. Please try again tomorrow.")
 
 def month(): return time.strftime("%Y-%m")
 
@@ -166,6 +186,35 @@ def clean_mock(r):
     if len(ex) < 10: raise ValueError(INCOMPLETE)
     return {"exercises": ex[:20]}
 
+def clean_tone(r):
+    out = {k: str(r.get(k, "")).strip()[:400] for k in ("casual", "neutral", "formal", "tip")}
+    if not all(out[k] for k in ("casual", "neutral", "formal")): raise ValueError(INCOMPLETE)
+    return out
+
+def clean_story(r):
+    s = lambda v, n: str(v or "")[:n]
+    text = s(r.get("text"), 1500).strip()
+    if len(text) < 20 or not s(r.get("from"), 80).strip(): raise ValueError(INCOMPLETE)
+    ms = [{"wrong": s(m.get("wrong"), 200), "right": s(m.get("right"), 200), "why": s(m.get("why"), 150)} for m in (r.get("mistakes") if isinstance(r.get("mistakes"), list) else [])
+          if isinstance(m, dict) and str(m.get("wrong", "")).strip() and str(m.get("right", "")).strip()][:8]
+    kind = s(r.get("kind"), 30).lower()
+    return {"text": text, "from": s(r.get("from"), 80), "kind": next((k for k in ("email", "conversation") if k in kind), "message"),
+            "summary": s(r.get("summary"), 800), "mistakes": ms, "praise": s(r.get("praise"), 300)}
+
+HABITS = ("plural -s", "articles (a, an, the)", "verb tense", "subject-verb agreement", "prepositions", "word order",
+          "word form (noun, verb, adjective)", "spelling", "missing words", "word choice")
+
+def clean_habits(r):
+    hs = []
+    for h in r.get("habits") if isinstance(r.get("habits"), list) else []:
+        if not isinstance(h, dict) or h.get("name") not in HABITS: continue
+        try: n = max(1, min(99, int(h.get("count") or 1)))
+        except (TypeError, ValueError): n = 1
+        hs.append({"name": h["name"], "count": n, "example": str(h.get("example", ""))[:300], "tip": str(h.get("tip", ""))[:300]})
+    ex = [e for e in map(clean_ex, r.get("exercises") if isinstance(r.get("exercises"), list) else []) if e and e["type"] in ("choice", "gap", "error")]
+    if not hs or len(ex) < 3: raise ValueError(INCOMPLETE)
+    return {"habits": hs[:3], "exercises": ex[:8]}
+
 def clean_placement(r):
     out = []
     for x in r.get("items") if isinstance(r.get("items"), list) else []:
@@ -229,7 +278,8 @@ def run_task(task, d):
     lv = d.get("level", "A1")
     if lv not in LEVELS: raise ValueError("Bad level")
     g = lambda k: str(d.get(k, ""))[:2000]  # cap input size (cost + abuse)
-    def js(p, n, o, c): return parse_json(ask([{"role": "user", "content": p}], JSON_SYS, n), o, c)
+    sysj = f"{JSON_SYS} The student's interests: {focus_text(d)}. Use them for examples and situations where it fits."
+    def js(p, n, o, c): return parse_json(ask([{"role": "user", "content": p}], sysj, n), o, c)
     if task == "vocab":
         try: per = max(2, min(8, int(d.get("per") or 6)))  # words in each of the 5 groups
         except (TypeError, ValueError): per = 6
@@ -248,7 +298,7 @@ def run_task(task, d):
                "Teach ONE grammar point simply. Return JSON "
                '{"title":"","what":"what it is, 1-2 simple sentences","use":["2-3 short points: when to use it"],'
                '"structure":["1-3 patterns, like Subject + have/has + past participle"],"hints":["signal words or phrases that often go with it"],'
-               '"examples":["3 short example sentences"],"watch":["2 common mistakes or tips"],"business":"one example sentence from a work situation",'
+               '"examples":["3 short example sentences"],"watch":["2 common mistakes or tips"],"business":"one example sentence from a real-life situation that fits the student interests",'
                + ex_spec(8) + "}.", 1800, "{", "}"), ("title",))
     if task == "exercises":
         if d.get("kind") not in SKILLS: raise ValueError("Bad request")
@@ -262,8 +312,8 @@ def run_task(task, d):
                '{"title":"",' + ex_spec(10, False) + ',"paragraph":{"prompt":"one short writing task that needs 4-6 sentences, about work or study",'
                '"use":["4-6 of the studied words"]}}.', 2400, "{", "}"))
     if task == "reading":
-        return clean_reading(js(f"CEFR level {lv}. Write a short text for a Vietnamese Business English student about: {g('topic') or 'a work situation'}. "
-               "It must be 140-200 words, at this level, in a realistic business setting (an email, a news item about a company, meeting notes or a report). "
+        return clean_reading(js(f"CEFR level {lv}. Write a short text for a Vietnamese learner of English about: {g('topic') or 'something that matches their interests'}. "
+               "It must be 140-200 words, at this level, in a realistic form that fits the topic (an email, a news article, a blog post, a short story, a dialogue or a report). "
                f"If it fits naturally, use some of these words the student has learned: {g('words')}. Return JSON "
                '{"title":"","text":"the text; separate paragraphs with a blank line","exercises":[5 comprehension questions of type '
                '{"type":"choice","q":"a question about the text","options":["a","b","c"],"answer":"b"} (each has exactly ONE correct answer; check twice), '
@@ -279,20 +329,49 @@ def run_task(task, d):
         dict_put([r], also=[word])
         return r
     if task == "phrases":
-        return clean_phrases(js(f"CEFR level {lv}. Give 8 useful English phrases for this Business English situation: {g('situation')[:100]}. "
-               "Natural and polite, each short enough to copy into an email or say in a meeting (use [name] or [date] only where needed). Return JSON "
+        return clean_phrases(js(f"CEFR level {lv}. Give 8 useful English phrases for this situation: {g('situation')[:100]}. "
+               "Natural and polite, each short enough to say or write (use [name] or [date] only where needed). Return JSON "
                '{"items":[{"phrase":"","use":"when to use it, 8 words at most"}]}.', 900, "{", "}"))
     if task == "mock":
-        return clean_mock(js(f"CEFR level {lv}. Make a timed Use of English style mock test of 15 items for a Vietnamese Business English student. "
+        return clean_mock(js(f"CEFR level {lv}. Make a timed Use of English style mock test of 15 items for a Vietnamese learner of English. "
                "Every item must have exactly ONE correct answer (check twice). Use: 5 items of type choice (a sentence with ___ and 3 or 4 options, including word patterns and phrasal verbs), "
                "4 items of type gap for word formation (a sentence with ___ and a CAPITAL base word in (brackets); the answer is the derived word), "
                "3 items of type gap testing a preposition or word pattern (the answer is the missing word; add a second accepted answer if one exists), "
                "2 items of type error (a sentence with one mistake; the answer is the corrected sentence) and 1 more choice item on a collocation. Return JSON "
                '{"exercises":[{"type":"choice","q":"sentence with ___","options":["a","b","c"],"answer":"b"},{"type":"gap","q":"sentence with ___ (BASE)","answer":["x"]},'
                '{"type":"error","q":"a sentence with one mistake","answer":["the corrected sentence"]}]}.', 3200, "{", "}"))
+    if task == "tone":
+        if not g("text").strip(): raise ValueError("Write a sentence first.")
+        return clean_tone(js(f"CEFR level {lv}. Rewrite this sentence in three tones and keep the meaning. Fix any mistakes. Sentence: {g('text')[:300]}. Return JSON "
+               '{"casual":"to a friend","neutral":"polite everyday English","formal":"for a teacher, a manager or an official email","tip":"one short line: what changes between the tones"}.', 500, "{", "}"))
+    if task == "translate":
+        items = [str(x)[:300] for x in d["items"]][:10] if isinstance(d.get("items"), list) else []
+        if not items: raise ValueError("Bad request")
+        r = js('Translate each English sentence into natural Vietnamese. Return JSON {"vi":[one Vietnamese sentence for each, in the same order]}. Sentences: '
+               + json.dumps(items, ensure_ascii=False), 1500, "{", "}")
+        vi = r.get("vi") if isinstance(r.get("vi"), list) else []
+        if len(vi) != len(items) or not all(str(v).strip() for v in vi): raise ValueError(INCOMPLETE)
+        return {"vi": [str(v)[:400] for v in vi]}
+    if task == "story":
+        return clean_story(js(f"CEFR level {lv}. You run a never-ending interactive story so a Vietnamese learner can practise English. The world: {g('world')[:150] or 'everyday life'}.\n"
+               f"Story so far: {g('summary')[:800] or '(new story: make the student the main character and start the first scene)'}\n"
+               f"Last message to the student: {g('last')[:1500] or '(none)'}\nThe student's reply: {g('reply')[:1500] or '(none yet)'}\n"
+               "If there is a reply, list its grammar and word mistakes, then continue the story so that it reacts to what the student wrote. "
+               "Write the next message from a character (a text message, an email or a spoken line), 40-120 words, at the student's level, ending with something the student must answer. Return JSON "
+               '{"mistakes":[{"wrong":"the wrong words from the reply","right":"the correction","why":"one short reason"}],"praise":"one short line about what was good (empty if there is no reply)",'
+               '"from":"character name and role","kind":"message, email or conversation","text":"the next message","summary":"the whole story so far in at most 80 words"}.', 1200, "{", "}"))
+    if task == "habits":
+        if not g("items").strip(): raise ValueError("Make some mistakes first, then come back.")
+        return clean_habits(js(f"CEFR level {lv}. These are a Vietnamese learner's recent English mistakes (exercise -> what they wrote -> correct answer):\n{g('items')[:4000]}\n"
+               f"Group them into habits using ONLY these names: {'; '.join(HABITS)}. Give the 3 most frequent habits (fewer if there are not enough mistakes), "
+               "with how many of the mistakes show it, one real example from the list and one simple tip (explain why Vietnamese speakers often make it, e.g. Vietnamese has no plural endings, articles or verb endings). "
+               "Then make 6 short exercises that practise those habits. Return JSON "
+               '{"habits":[{"name":"","count":2,"example":"you wrote X, correct: Y","tip":""}],"exercises":[6 items of these types: '
+               '{"type":"choice","q":"sentence with ___","options":["a","b","c"],"answer":"b"},{"type":"gap","q":"sentence with ___","answer":["x"]},'
+               '{"type":"error","q":"a sentence with one mistake","answer":["the corrected sentence"]}]}.', 1600, "{", "}"))
     if task == "placement":
         return clean_placement(js("Make a placement test for a Vietnamese learner of English. 12 items: exactly 2 for each CEFR level A1, A2, B1, B2, C1, C2, "
-            "in that order, each clearly at its level; mix grammar and vocabulary (work contexts are fine from B1). Return JSON "
+            "in that order, each clearly at its level; mix grammar and vocabulary (everyday, study and work contexts). Return JSON "
             '{"items":[{"level":"A1","skill":"grammar or vocab","type":"choice","q":"sentence with ___","options":["a","b","c"],"answer":"b"},'
             '{"level":"B1","skill":"grammar","type":"gap","q":"sentence with ___ and the base word in (brackets)","answer":["x"]},'
             '{"level":"B2","skill":"vocab","type":"error","q":"sentence with one mistake","answer":["the corrected sentence"]}]} '
@@ -300,7 +379,7 @@ def run_task(task, d):
     if task == "course":
         return clean_course(js(f"A placement test says the student's level is {lv}. Scores: {g('scores')}. Missed items: {g('missed')}. "
             f"Writing sample (may be empty): {g('text')}\n"
-            "Make a personal practice plan of 8 daily speaking/writing ideas for this student (role-plays and business emails). "
+            f"Make a personal practice plan of 8 daily speaking/writing ideas for this student (role-plays, emails and conversations about: {focus_text(d)}). "
             "Start at their level, aim at their weak areas, end slightly harder. Return JSON "
             '{"summary":"2 simple sentences about the student, in English","strengths":["2 short items"],"weak":["2-3 short items"],'
             '"units":[{"practice":"one short role-play or email idea"}]}.', 1200, "{", "}"))
@@ -320,8 +399,13 @@ def chat(d):
     lv, mode = d.get("level", "A1"), d.get("mode", "chat")
     if lv not in LEVELS or mode not in ("chat", "email", "roleplay"): raise ValueError("Bad request")
     if mode == "roleplay" and d.get("scenario") not in SCEN: raise ValueError("Pick a scene first.")
+    msgs = d.get("messages")
+    if not isinstance(msgs, list) or not msgs or not all(isinstance(m, dict) and m.get("role") in ("user", "assistant")
+                                                         and isinstance(m.get("content"), str) and len(m["content"]) <= 4000 for m in msgs):
+        raise ValueError("Bad request")
     sysmsg = {"chat": SYSTEM, "email": EMAIL, "roleplay": ROLE.format(who=SCEN.get(d.get("scenario")))}[mode]
-    return ask(d["messages"], f"{sysmsg} The student's level is {lv}.", 500 if mode == "email" else None)
+    return ask([{"role": m["role"], "content": m["content"]} for m in msgs[-40:]],
+               f"{sysmsg} The student's level is {lv}. Their interests: {focus_text(d)}.", 500 if mode == "email" else None)
 
 def search(q):
     """YouTube Data API v3 (needs the student's own free API key). Embeddable videos only."""
@@ -384,24 +468,30 @@ POST = {"/chat": lambda d: {"reply": chat(d)}, "/ai": lambda d: {"result": run_t
 class H(BaseHTTPRequestHandler):
     def send(self, code, body, ctype="application/json"):
         b = body if isinstance(body, bytes) else json.dumps(body).encode()
-        self.send_response(code); self.send_header("content-type", ctype)
+        self.send_response(code); self.send_header("content-type", ctype); self.send_header("x-content-type-options", "nosniff")
         self.send_header("content-length", str(len(b))); self.end_headers(); self.wfile.write(b)
     def reply(self, fn):
         try: self.send(200, fn())
         except (ValueError, KeyError) as e:  # shown to the user in the page
             self.send(400, {"error": str(e)})
+        except (TypeError, AttributeError):  # a request with the wrong shape (e.g. a list instead of an object)
+            self.send(400, {"error": "Bad request."})
         except OSError:
             self.send(502, {"error": "Network problem. Check your internet."})
+        except Exception as e:  # never leave the page waiting; details stay out of the reply
+            print("server error:", type(e).__name__)
+            self.send(500, {"error": "Server error. Please try again."})
     def body(self):
-        n = int(self.headers["content-length"])
-        if n > 6_000_000: raise ValueError("Request too big.")
+        n = int(self.headers.get("content-length") or 0)
+        if not 0 < n <= 6_000_000: raise ValueError("Request too big." if n else "Bad request.")
         return json.loads(self.rfile.read(n))
     def user(self):
         """Who is asking: 'local' without a password; with APP_PASSWORD, the login name (None = not allowed)."""
-        if not AUTH: return "local"
+        if not AUTH and not USERS: return "local"
         try: u, _, p = base64.b64decode(self.headers.get("authorization", "")[6:]).decode().partition(":")
         except ValueError: return None
-        return re.sub(r"\W", "_", u)[:40] if u and hmac.compare_digest(p.encode(), AUTH.encode()) else None
+        want = USERS.get(u, "") if USERS else AUTH
+        return re.sub(r"\W", "_", u)[:40] if u and want and hmac.compare_digest(p.encode(), want.encode()) else None
     def deny(self):
         self.send_response(401); self.send_header("www-authenticate", 'Basic realm="English Learner"')
         self.send_header("content-length", "0"); self.end_headers()
@@ -420,8 +510,11 @@ class H(BaseHTTPRequestHandler):
         if not uid: return self.deny()
         if self.path == "/progress": return self.reply(lambda: save_progress(uid, self.body()))
         fn = POST.get(self.path)
-        if fn: self.reply(lambda: fn(self.body()))
-        else: self.send(404, {"error": "not found"})
+        if not fn: return self.send(404, {"error": "not found"})
+        if self.path == "/settings":
+            if uid != ADMIN: return self.send(403, {"error": "Only the admin can change Settings."})
+            return self.reply(lambda: fn(self.body()))
+        self.reply(lambda: count_call(uid) or fn(self.body()))  # count_call returns None, or raises when the daily limit is reached
     def log_message(self, *a): pass  # keep the console free of request details
 
 def watch():
@@ -432,8 +525,9 @@ def watch():
         if os.path.getmtime(f) != t: os._exit(3)
 
 if __name__ == "__main__":
-    if HOST not in ("127.0.0.1", "localhost") and not AUTH:
-        raise SystemExit("Set APP_PASSWORD before exposing the app: anyone could change your API key and spend your money.")
-    threading.Thread(target=watch, daemon=True).start()
+    local = HOST in ("127.0.0.1", "localhost")
+    if not local and not (AUTH or USERS):
+        raise SystemExit("Set APP_USERS (or APP_PASSWORD) before exposing the app: anyone could use your API key and spend your money.")
+    if local: threading.Thread(target=watch, daemon=True).start()  # auto-restart on code changes: only on your own computer
     print(f"Open http://{HOST}:{PORT}  (Ctrl+C to stop)")
     ThreadingHTTPServer((HOST, PORT), H).serve_forever()

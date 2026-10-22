@@ -14,8 +14,24 @@ def err(fn, text):
     except ValueError as e: assert text in str(e), text
 
 try:
-    assert len(server.trim(list(range(20)), 4)) == 8
-    err(lambda: post("/chat", {"messages": []}), "No API key")
+    u_, a_ = {"role": "user", "content": "u"}, {"role": "assistant", "content": "a"}
+    assert len(server.trim([u_, a_] * 10, 4)) == 8 and server.trim([u_, a_, u_], 1) == [u_] and server.trim([a_, u_, a_, u_], 4)[0] == u_
+    err(lambda: post("/chat", {"messages": [u_]}), "No API key")
+    for bad in ([], [{"role": "system", "content": "x"}], [{"role": "user", "content": 5}], [{"role": "user", "content": "x" * 4001}], "hi"):
+        err(lambda: post("/chat", {"messages": bad}), "Bad request")
+    err(lambda: post("/ai", [1, 2]), "Bad request")  # wrong shape: a clear 400, not a crash
+    req = urllib.request.Request(U + "/ai", b"", method="POST")
+    try: urllib.request.urlopen(req); raise SystemExit("expected 400")
+    except urllib.error.HTTPError as e: assert e.code == 400
+    server.ADMIN = "boss"
+    try: post("/settings", {"model": "evil"}); raise SystemExit("expected 403")
+    except urllib.error.HTTPError as e: assert e.code == 403 and get("/settings")["model"] != "evil"
+    server.ADMIN = "local"
+    server.AI_LIMIT, server._calls = 2, {}
+    for _ in range(2): err(lambda: post("/chat", {"messages": [u_]}), "No API key")
+    err(lambda: post("/chat", {"messages": [u_]}), "Daily AI limit")
+    server.AI_LIMIT, server._calls = 500, {}
+    assert server.focus_text({}) == "everyday life" and server.focus_text({"focus": ["work", "study", "work", "bad", ["x"]]}) == "work and business, university study and exams"
     post("/settings", {"model": "x", "api_key": "secret", "yt_key": "ytsecret", "history_turns": "2"})
     r = get("/settings")
     assert r["model"] == "x" and r["history_turns"] == 2 and r["key_set"] and r["yt_set"] and "secret" not in json.dumps(r)
@@ -130,6 +146,30 @@ try:
     open(server.dict_file(), "w").write("{broken"); server._dict["path"] = None; assert server.dict_words() == {}  # a broken file = empty dictionary, no crash
     assert server.progress_file("shared-dictionary") != server.dict_file()
 
+    # focus reaches the AI; tone, translate, story and habits outputs are validated
+    sys_seen = []
+    server.ask = lambda m, system=None, max_tokens=None: (sys_seen.append(system) or seen.append(m[0]["content"]) or json.dumps({"casual": "c", "neutral": "n", "formal": "f", "tip": "t"}))
+    r = server.run_task("tone", {"level": "B1", "text": "send me file", "focus": ["travel"]}); assert r == {"casual": "c", "neutral": "n", "formal": "f", "tip": "t"}
+    assert "travel and daily life abroad" in sys_seen[-1] and "send me file" in seen[-1]
+    server.run_task("tone", {"level": "B1", "text": "x"}); assert "everyday life" in sys_seen[-1]
+    err(lambda: server.run_task("tone", {"level": "B1", "text": " "}), "Write a sentence")
+    server.ask = fake(json.dumps({"casual": "c", "neutral": "", "formal": "f"})); err(lambda: server.run_task("tone", {"level": "B1", "text": "x"}), "incomplete")
+    server.ask = fake(json.dumps({"vi": ["một", "hai"]}))
+    assert server.run_task("translate", {"level": "B1", "items": ["one", "two"]}) == {"vi": ["một", "hai"]} and '"one"' in seen[-1]
+    err(lambda: server.run_task("translate", {"level": "B1", "items": ["a", "b", "c"]}), "incomplete")
+    err(lambda: server.run_task("translate", {"level": "B1", "items": "abc"}), "Bad request")
+    server.ask = fake(json.dumps({"mistakes": [{"wrong": "I go yesterday", "right": "I went yesterday", "why": "past"}, {"wrong": "", "right": "x"}, "junk"],
+                                  "praise": "Nice", "from": "Anna, your flatmate", "kind": "Text message", "text": "Hi! Where did you go yesterday? Tell me everything.", "summary": "S"}))
+    r = server.run_task("story", {"level": "B1", "world": "Sharing a flat", "summary": "old", "last": "Where were you?", "reply": "I go yesterday"})
+    assert r["kind"] == "message" and len(r["mistakes"]) == 1 and r["from"].startswith("Anna") and "I go yesterday" in seen[-1] and "Sharing a flat" in seen[-1]
+    server.ask = fake(json.dumps({"from": "A", "kind": "email", "text": "short"})); err(lambda: server.run_task("story", {"level": "B1"}), "incomplete")
+    hx = [{"type": "gap", "q": "two ___ (book)", "answer": ["books"]}] * 4 + [{"type": "write", "q": "w"}]
+    server.ask = fake(json.dumps({"habits": [{"name": "plural -s", "count": "3", "example": "e", "tip": "t"}, {"name": "made up", "count": 1}, {"name": "verb tense", "count": "lots"}], "exercises": hx}))
+    r = server.run_task("habits", {"level": "B1", "items": "two book -> books"})
+    assert [(h["name"], h["count"]) for h in r["habits"]] == [("plural -s", 3), ("verb tense", 1)] and len(r["exercises"]) == 4 and "plural -s" in seen[-1]
+    err(lambda: server.run_task("habits", {"level": "B1", "items": ""}), "mistakes first")
+    server.ask = fake(json.dumps({"habits": [{"name": "made up"}], "exercises": hx})); err(lambda: server.run_task("habits", {"level": "B1", "items": "x"}), "incomplete")
+
     # level test and practice plan
     pit = lambda lv, sk="grammar": {"level": lv, "skill": sk, "type": "choice", "q": "q ___", "options": ["a", "b"], "answer": "a"}
     items = [pit(l) for l in ("B1", "A1", "A2", "A1")] + [pit("C2", "vocab"), pit("B2"), {**pit("A1"), "skill": "x"},
@@ -155,10 +195,10 @@ try:
     # chat modes
     got = {}
     server.ask = lambda m, system=None, max_tokens=None: (got.update(s=system, t=max_tokens) or "r")
-    assert server.chat({"messages": [], "mode": "roleplay", "scenario": "meeting", "level": "B2"}) == "r" and "colleague" in got["s"]
-    server.chat({"messages": [], "mode": "email"}); assert got["t"] == 500
+    assert server.chat({"messages": [u_], "mode": "roleplay", "scenario": "meeting", "level": "B2"}) == "r" and "colleague" in got["s"]
+    server.chat({"messages": [u_], "mode": "email"}); assert got["t"] == 500
     for bad in ({"mode": "x"}, {"mode": "roleplay"}, {"level": "Z"}):
-        err(lambda: server.chat({"messages": [], **bad}), "")
+        err(lambda: server.chat({"messages": [u_], **bad}), "")
 
     # YouTube search: parsing, entity decoding, id validation, missing key
     class R:  # fake HTTP response
@@ -198,7 +238,13 @@ try:
     assert os.path.exists(os.path.join(server.DATA, "daisy.json")) and '"lv": "A2"' in page(ok) and '"lv": "B1"' not in page(ok)
     try: page({"Authorization": "Basic " + base64.b64encode(b"daisy:bad").decode()}); raise SystemExit("expected 401")
     except urllib.error.HTTPError as e: assert e.code == 401
-    server.AUTH = ""
+    server.AUTH, server.USERS = "", {"daisy": "pw1", "minh": "pw2"}  # one password per person
+    auth = lambda u, p: {"Authorization": "Basic " + base64.b64encode(f"{u}:{p}".encode()).decode()}
+    assert "SERVER_PROGRESS=" in page(auth("minh", "pw2"))
+    for u, p in (("daisy", "pw2"), ("minh", "pw1"), ("nobody", ""), ("nobody", "pw1")):
+        try: page(auth(u, p)); raise SystemExit("expected 401")
+        except urllib.error.HTTPError as e: assert e.code == 401
+    server.USERS = {}
     print("all ok")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)

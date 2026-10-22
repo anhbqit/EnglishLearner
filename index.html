@@ -38,13 +38,13 @@ small,a{color:#777}
 .num{width:80px}#s input[type=checkbox]{width:auto}
 .pb{height:10px;background:#eadde3;border-radius:6px;overflow:hidden;margin:6px 0}.pf{height:100%;background:#e0679a}
 .bd{padding:6px 10px;border-radius:999px;background:#fff1d6;border:1px solid #f0d49a}.bd.off{filter:grayscale(1);opacity:.45}
-.rw{cursor:pointer;border-radius:4px}.rw:hover{background:#fde0ec}#rtx p{line-height:1.7}
+input[type=checkbox]{width:auto}.rw.kn{background:#e0f4e8;border-bottom:2px solid #2a7}.rw{cursor:pointer;border-radius:4px}.rw:hover{background:#fde0ec}#rtx p{line-height:1.7}
 .dw{display:inline-block;margin:2px 4px;padding:1px 6px;border-radius:6px}.dw.y{background:#e0f4e8;color:#1f7a45}.dw.n{background:#fde0e0;color:#c33;text-decoration:underline}
 .sticky{position:sticky;bottom:0;background:#fdf6f9;padding:10px 0;margin:0;border-top:1px solid #eadde3;z-index:2}
 </style>
 <main><header>English Learner 🌸 <button type=button id=g>Settings</button></header>
 <nav id=grp><button data-g=home class=on>🏠 Today</button><button data-g=learn>📘 Learn</button><button data-g=pract>💪 Practice</button><button data-g=me>👤 Me</button></nav>
-<nav id=nav><button data-t=today data-g=home class="on sh">Today's missions</button><button data-t=review data-g=home class=sh>Look back at a day</button><button data-t=cards data-g=learn>Vocabulary</button><button data-t=grammar data-g=learn>Grammar</button><button data-t=read data-g=learn>Reading</button><button data-t=prac data-g=pract>Quick practice</button><button data-t=chat data-g=pract>Chat</button><button data-t=shadow data-g=pract>Shadowing</button><button data-t=test data-g=pract>Test</button><button data-t=acct data-g=me>Progress & backup</button><button data-t=place data-g=me>My Course</button><button data-t=music data-g=music>🎵 YouTube & music</button></nav>
+<nav id=nav><button data-t=today data-g=home class="on sh">Today's missions</button><button data-t=review data-g=home class=sh>Look back at a day</button><button data-t=cards data-g=learn>Vocabulary</button><button data-t=grammar data-g=learn>Grammar</button><button data-t=read data-g=learn>Reading</button><button data-t=prac data-g=pract>Quick practice</button><button data-t=story data-g=pract>Story</button><button data-t=chat data-g=pract>Chat</button><button data-t=shadow data-g=pract>Shadowing</button><button data-t=test data-g=pract>Test</button><button data-t=acct data-g=me>Progress & backup</button><button data-t=place data-g=me>My Course</button><button data-t=music data-g=music>🎵 YouTube & music</button></nav>
 
 <section class="tab on" id=today>
 <div id=clock></div><div id=greet></div><small id=yday></small><div id=gbar></div><div id=tl></div></section>
@@ -68,6 +68,8 @@ small,a{color:#777}
 <div id=as></div>
 <b>Activity</b> <small>last 20 weeks · click a day to see its review</small><div class=hm id=ah></div>
 <div id=aw></div>
+<b>My focus</b><small>What you want English for. The AI uses it for texts, chats, phrases and examples.</small>
+<div class=row id=pfoc><label><input type=checkbox value=general> Everyday life</label><label><input type=checkbox value=work> Work</label><label><input type=checkbox value=study> Study & exams</label><label><input type=checkbox value=travel> Travel</label></div>
 <b>Daily goal and reminder</b>
 <div class=row><label>Activities per day <input id=pgoal type=number min=1 max=500 class=num></label>
 <label><input type=checkbox id=pron> Remind me at <input type=time id=prt></label></div>
@@ -77,8 +79,8 @@ small,a{color:#777}
 <div class=row><button id=bdl class=sec>Download my progress</button><button id=bup class=sec>Restore from a file</button><input type=file id=bfile accept=".json,application/json" class=hide><button id=bcsv class=sec>Export my words (CSV)</button></div><small id=bmsg></small></section>
 
 <section class=tab id=chat>
-<div class=row><select id=mode><option value=chat>Free chat<option value=email>Business email<option value=roleplay>Role-play</select>
-<select id=scn class=hide><option value=interview>Job interview<option value=meeting>Team meeting<option value=customer>Unhappy customer<option value=supplier>Supplier negotiation<option value=smalltalk>Coworker small talk</select>
+<div class=row><select id=mode><option value=chat>Free chat<option value=email>Email<option value=roleplay>Role-play</select>
+<select id=scn class=hide><option value=friend>New friend at a café<option value=shop>In a shop<option value=hotel>Hotel check-in<option value=doctor>At the doctor's<option value=lecturer>Talking to a lecturer<option value=interview>Job interview<option value=meeting>Team meeting<option value=customer>Unhappy customer<option value=supplier>Supplier negotiation<option value=smalltalk>Coworker small talk</select>
 <select class=lv id=lv0></select><button id=start class=hide>Start</button><button id=phb class=sec>📋 My phrases</button></div>
 <div class="card hide" id=phr>
 <div class=row><select id=phs class=grow></select><button id=phg>Suggest phrases</button><small id=phst></small></div>
@@ -117,16 +119,31 @@ small,a{color:#777}
 <section class=tab id=read>
 <div class=row><select class=lv id=lv5></select><select id=rtp class=grow></select><button id=rnew>New text</button><small id=rst></small></div>
 <small>Read the text. Click any word to see its meaning and save it to your words. Then answer the questions.</small>
-<div class="card hide" id=rc><b class=h2 id=rt></b><div id=rtx></div>
+<div class="card hide" id=rc><b class=h2 id=rt></b><div id=rtx></div><small id=rkn></small>
 <div class="card hide" id=rdef></div>
 <b>Questions</b><div id=rex></div>
 <div class="row sticky"><button id=rck>Check answers</button><b id=rsc></b><small id=rst2></small></div><div class=fb id=rfb></div></div></section>
 
 <section class=tab id=prac>
-<small>Short practice from the words you already learned. It needs no AI, so it costs nothing.</small>
-<div class=row><button id=pq>⚡ 5-minute review</button><button id=pdict class=sec>👂 Dictation</button><button id=pspk class=sec>🎤 Pronunciation</button></div><small id=pst2></small>
+<small>Short practice from the words you already learned. Most of it needs no AI, so it costs nothing.</small>
+<div class=row><button id=pq>⚡ 5-minute review</button><button id=pdict class=sec>👂 Dictation</button><button id=pspk class=sec>🎤 Pronunciation</button><button id=pbt class=sec>🔁 Back-translation</button></div><small id=pst2></small>
 <div class="card hide" id=pm></div>
-<div id=pweak></div></section>
+<div id=pweak></div>
+<div class=card><b>🎚️ Tone dial</b><small>Write one sentence and see it casual, neutral and formal. Uses the AI (a tiny cost).</small>
+<div class=row><input id=tni class=grow maxlength=300 placeholder="e.g. send me the file" autocomplete=off><button id=tnb>Change the tone</button></div><small id=tnst></small><div id=tno></div></div>
+<div class=card><b>🇻🇳 My English habits</b><small>Finds your most common mistakes (many Vietnamese speakers share them) and gives you short drills. Uses the AI, about 1 cent. Good to do once a week.</small>
+<div class=row><button id=hbb class=sec>Find my habits</button><small id=hbst></small></div><div id=hbo></div><div id=hbx></div>
+<div class="row hide" id=hbr><button id=hbk>Check answers</button><b id=hbsc></b></div></div></section>
+
+<section class=tab id=story>
+<small>A story that continues every time you reply. You are the main character. The AI corrects your English, and the story reacts to what you write.</small>
+<div class=row><select id=stw class=grow></select><select class=lv id=lv7></select><button id=stn class=sec>Start a new story</button><small id=stst></small></div>
+<input id=stc class="w100 hide" maxlength=150 placeholder="Describe your own world, e.g. a summer job at a café in London" autocomplete=off>
+<div class="card hide" id=stb><small id=stsum></small>
+<div class=row><b id=stfrom class=grow></b><button id=stsay class=sec>🔊</button></div><div id=sttext></div>
+<textarea id=strep placeholder="Write your reply in English"></textarea>
+<div class=row><button id=sts>Send reply</button><small id=stst2></small></div><div class=fb id=stfb></div></div>
+<details id=sthd class=hide><summary>Earlier in the story</summary><div id=sth></div></details></section>
 
 <section class=tab id=test>
 <div class=row><select id=tmode><option value=prog>Progress test (from what I learned)<option value=mock>Mock exam (timed)</select></div>
@@ -195,8 +212,8 @@ small,a{color:#777}
 const SP=window.SERVER_PROGRESS||{},LOCAL_NEWER=+localStorage._t>+(SP._t||0);
 if(!LOCAL_NEWER)for(const k in SP)localStorage[k]=SP[k]; // the server copy wins, unless this browser changed something more recently (a quick reload)
 const $=i=>document.getElementById(i),F=["provider","model","base_url","history_turns","max_tokens","budget","price_in","price_out"];
-const post=(u,b)=>fetch(u,{method:"POST",body:JSON.stringify(b)}).then(r=>r.json());
-const jget=(k,d)=>JSON.parse(localStorage[k]||d);
+const post=(u,b)=>fetch(u,{method:"POST",body:JSON.stringify(b)}).then(r=>r.json()).catch(()=>({error:"Could not reach the server. Check your connection and try again."}));
+const jget=(k,d)=>{try{return JSON.parse(localStorage[k]||d)}catch(e){return JSON.parse(d)}}; // one damaged value must not break the whole page
 const dayStr=n=>new Date(Date.now()+(n||0)*864e5).toLocaleDateString("sv"); // yyyy-mm-dd, local time
 const el=(t,txt,cls)=>{const e=document.createElement(t);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;return e}; // textContent only: AI text is never HTML
 const secs=(ct,pairs)=>ct.replaceChildren(...pairs.flatMap(([h,v])=>!v||!v.length?[]:[el("b",h),Array.isArray(v)?(u=>(v.forEach(x=>u.append(el("li",x))),u))(el("ul")):el("p",v)]));
@@ -204,7 +221,8 @@ const LV=["A1","A2","B1","B2","C1","C2"],curLevel=()=>localStorage.lv||"A1";
 const setLevel=l=>{document.querySelectorAll(".lv").forEach(o=>o.value=l);localStorage.lv=l;drawPath();drawVTopics();drawRTopics()};
 document.querySelectorAll(".lv").forEach(s=>{LV.forEach(l=>s.add(new Option(l)));s.value=curLevel();s.onchange=()=>setLevel(s.value)});
 // call the AI; shows errors/progress in `out`, returns the result or undefined
-const ai=async(task,d,out)=>{out.textContent="Thinking...";const r=await post("/ai",{task,...d});out.textContent=r.error||"";refreshUsageSoon();return r.result};
+const focus=()=>{const f=profile().focus;return Array.isArray(f)&&f.length?f:["general"]};
+const ai=async(task,d,out)=>{out.textContent="Thinking...";const r=await post("/ai",{task,focus:focus(),...d});out.textContent=r.error||"";refreshUsageSoon();return r.result};
 const bad=(out,r,...keys)=>{const x=!r||keys.some(k=>!Array.isArray(r[k]));if(x&&r)out.textContent="The AI reply was incomplete. Please try again.";return x};
 
 // progress, all in localStorage (and copied to the server): saved words, a per-day activity log, a journal, mistakes
@@ -250,7 +268,7 @@ const go=t=>{document.querySelectorAll("nav button,.tab").forEach(x=>x.classList
  const g=document.querySelector(`[data-t=${t}]`).dataset.g;LASTSUB[g]=t;
  document.querySelectorAll("#grp button").forEach(b=>b.classList.toggle("on",b.dataset.g==g));
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("sh",b.dataset.g==g));
- if(t=="prac")drawWeak();if(t=="read")drawRTopics();if(t=="acct")drawAccount();if(t=="place")drawCourse();if(t=="grammar")drawPath();if(t=="cards"){drawVTopics();stats()}if(t=="today")today();if(OPEN[t])reopen(t);markTest()};
+ if(t=="prac")drawWeak();if(t=="story")drawStory();if(t=="read")drawRTopics();if(t=="acct")drawAccount();if(t=="place")drawCourse();if(t=="grammar")drawPath();if(t=="cards"){drawVTopics();stats()}if(t=="today")today();if(OPEN[t])reopen(t);markTest()};
 $("nav").onclick=e=>e.target.dataset.t&&go(e.target.dataset.t);
 const LASTSUB={}; // each group reopens the page you last used in it
 $("grp").onclick=e=>{const g=e.target.dataset.g;if(g)go(LASTSUB[g]||document.querySelector(`#nav [data-g=${g}]`).dataset.t)};
@@ -270,6 +288,7 @@ const missions=P=>{const n=Math.min(P.due||0,10),L=P.L||curLevel();return[
  {k:"grammar",name:"Grammar lesson",what:P.grammar_topic||"You finished every grammar topic at this level. Choose a higher level.",goal:1,tab:"grammar",run:()=>P.grammar_topic&&(openGrammar(P.grammar_topic,L),1)},
  {k:"reading",name:"Reading",what:"Read a short business text and answer the questions",goal:1,tab:"read"},
  {k:"quick",name:"Quick review",what:"Practise your weak words (about 5 minutes, no AI)",goal:1,tab:"prac",run:()=>($("pq").click(),1)},
+ {k:"story",name:"My English story",what:"Reply to the next message in your story",goal:1,tab:"story"},
  {k:"chat",name:"Speaking & writing",what:P.practice||DEF,goal:3,tab:"chat"},
  {k:"test",name:"Progress test",what:"Take a test made from what you have learned",goal:1,tab:"test"},
  {k:"shadow",name:"Listening",what:"Shadow 1 video",goal:1,tab:"shadow"}]};
@@ -301,11 +320,11 @@ const tick=()=>{$("clock").textContent=new Date().toLocaleString("en-GB",{weekda
 // day review: reads the journal (what you learned), the log (counts) and your mistakes for one day. No AI call, no cost
 function drawReview(){const d=$("rd").value||dayStr(),J=jget("journal","{}")[d]||[],L=jget("log","{}")[d]||{},of=k=>J.filter(e=>e.k==k),last={};
  of("wcheck").forEach(e=>last[e.w]=e.ok);const ws=ok=>Object.keys(last).filter(w=>last[w]==ok).join(", ");
- const names={vocab:"Vocabulary lessons",cards:"Words written",grammar:"Grammar lessons",chat:"Chat messages",test:"Tests",shadow:"Shadowing videos",reading:"Reading texts",dict:"Dictation sentences",speak:"Pronunciation tries",quick:"Quick reviews",mock:"Mock exams"};
+ const names={vocab:"Vocabulary lessons",cards:"Words written",grammar:"Grammar lessons",chat:"Chat messages",test:"Tests",shadow:"Shadowing videos",reading:"Reading texts",dict:"Dictation sentences",speak:"Pronunciation tries",quick:"Quick reviews",mock:"Mock exams",story:"Story replies",tone:"Tone dial tries",backtr:"Back-translations"};
  const due=Object.values(cards()).filter(c=>c.due<=dayStr(1)).length,nv=nextVTopic(curLevel()),ng=nextTopic(curLevel());
  secs($("rv"),[["Done",Object.entries(names).filter(([k])=>L[k]).map(([k,n])=>`${n}: ${L[k]}`)],
   ["New vocabulary",of("vlesson").map(e=>`${e.title}: ${e.words.join(", ")}`)],["Words you wrote correctly ✓",ws(true)],["Words to practice again ✗",ws(false)],
-  ["Grammar",of("glesson").map(e=>e.title)],["Exercise scores",of("vscore").concat(of("gscore")).map(e=>`${e.title}: ${e.s}`)],["Reading",of("reading").map(e=>`${e.title}: ${e.s}`)],["Mock exams",of("mock").map(e=>`${e.title}: ${e.s}`)],
+  ["Grammar",of("glesson").map(e=>e.title)],["Exercise scores",of("vscore").concat(of("gscore")).map(e=>`${e.title}: ${e.s}`)],["Reading",of("reading").map(e=>`${e.title}: ${e.s}`)],["Mock exams",of("mock").map(e=>`${e.title}: ${e.s}`)],["Story",of("story").map(e=>`${e.title}: ${e.s}`)],
   ["Mistakes to review",jget("missed","[]").filter(m=>m.d==d).map(m=>`${m.q} — you: ${m.yours||"(blank)"} — answer: ${m.answer}`)],
   ["Test feedback",of("test").map(e=>e.fb).join("\n\n")],
   ...(d==dayStr()?[["Tomorrow",[`Words due for review: ${due}`,...(nv?[`Next vocabulary topic: ${nv}`]:[]),...(ng?[`Next grammar topic: ${ng}`]:[])]]]:[])]);
@@ -313,7 +332,7 @@ function drawReview(){const d=$("rd").value||dayStr(),J=jget("journal","{}")[d]|
 $("rd").onchange=drawReview;
 
 // account: stats, activity map, word progress, topic paths. Progress is also saved on the server (this is the cloud copy)
-const SYNC=["cards","log","journal","plan","course","lv","plist","gdone","profile","lessons","missed","testmark","sessions","phrases"];
+const SYNC=["cards","log","journal","plan","course","lv","plist","gdone","profile","lessons","missed","testmark","sessions","phrases","habits","story"];
 let synced="",syncMsg="";
 const snap=()=>{const d={};SYNC.forEach(k=>{if(localStorage[k]!=null)d[k]=localStorage[k]});return d};
 async function syncUp(){const d=snap(),j=JSON.stringify(d);if(!Object.keys(d).length||j==synced)return;localStorage._t=Date.now(); // nothing to save (e.g. browser data was cleared): do not claim to be newer
@@ -329,11 +348,11 @@ const saveProfile=o=>{localStorage.profile=JSON.stringify({...profile(),...o})};
 const totals=()=>{const t={};Object.values(jget("log","{}")).forEach(d=>Object.entries(d).forEach(([k,n])=>t[k]=(t[k]||0)+n));return t};
 const BADGES=[["🌱","First day",s=>s.days>=1],["🔥","3-day streak",s=>s.best>=3],["⚡","7-day streak",s=>s.best>=7],["🏆","30-day streak",s=>s.best>=30],
  ["📘","50 words",s=>s.words>=50],["📗","200 words",s=>s.words>=200],["📚","500 words",s=>s.words>=500],["✏️","First grammar topic",s=>s.gr>=1],["🧠","10 grammar topics",s=>s.gr>=10],
- ["📝","First test",s=>s.tests>=1],["💬","50 chat messages",s=>s.chat>=50],["📖","First reading",s=>s.reading>=1],["🎤","First pronunciation try",s=>s.speak>=1],["⏱️","First mock exam",s=>s.mock>=1],["🎯","Goal reached",s=>s.goalDays>=1]];
-function drawBadges(){const si=streakInfo(),tt=totals(),st={days:si.days.length,best:si.best,words:Object.keys(cards()).length,gr:Object.keys(gdone()).length,tests:tt.test||0,chat:tt.chat||0,reading:tt.reading||0,speak:tt.speak||0,mock:tt.mock||0,goalDays:si.days.filter(d=>actOf(si.L,d)>=goal()).length};
+ ["📝","First test",s=>s.tests>=1],["💬","50 chat messages",s=>s.chat>=50],["📖","First reading",s=>s.reading>=1],["🎤","First pronunciation try",s=>s.speak>=1],["⏱️","First mock exam",s=>s.mock>=1],["🎯","Goal reached",s=>s.goalDays>=1],["🗺️","First story reply",s=>s.story>=1]];
+function drawBadges(){const si=streakInfo(),tt=totals(),st={days:si.days.length,best:si.best,words:Object.keys(cards()).length,gr:Object.keys(gdone()).length,tests:tt.test||0,chat:tt.chat||0,reading:tt.reading||0,speak:tt.speak||0,mock:tt.mock||0,story:tt.story||0,goalDays:si.days.filter(d=>actOf(si.L,d)>=goal()).length};
  $("bdg").replaceChildren(...BADGES.map(([e,n,f])=>{const ok=f(st),b=el("span",`${e} ${n}`,"bd"+(ok?"":" off"));b.title=ok?"Earned!":"Not yet";return b}))}
 function drawAccount(){const si=streakInfo(),act=d=>actOf(si.L,d),days=si.days,L=si.L;
- $("pname").value=profile().name||"";$("pgoal").value=goal();$("pron").checked=!!profile().ron;$("prt").value=profile().rtime||"19:00";$("sync").textContent=syncMsg||"Progress is saved to the server automatically.";
+ $("pname").value=profile().name||"";$("pgoal").value=goal();$("pfoc").querySelectorAll("input").forEach(i=>i.checked=focus().includes(i.value));$("pron").checked=!!profile().ron;$("prt").value=profile().rtime||"19:00";$("sync").textContent=syncMsg||"Progress is saved to the server automatically.";
  secs($("as"),[["Learning",[`Days learning: ${days.length}${days.length?` (since ${days[0]})`:""}`,`Current streak: ${si.cur} day(s) · Longest streak: ${si.best} day(s)`,`Activities in total: ${days.reduce((a,d)=>a+act(d),0)}`]]]);
  const dow=(new Date().getDay()+6)%7,hm=$("ah");hm.replaceChildren(); // 20 weeks, Monday first; one square per day
  for(let k=19*7+dow;k>=0;k--){const d=dayStr(-k),n=act(d),c=el("div","","cell "+(n?n<5?"h1":n<10?"h2c":n<20?"h3":"h4":"h0"));c.dataset.tip=`${new Date(d+"T00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"})} · ${n} ${n==1?"activity":"activities"}`;c.onclick=()=>{$("rd").value=d;go("review")};hm.append(c)}
@@ -449,7 +468,7 @@ const HINT={chat:"Hi! Write me something in English and I'll fix it and explain 
 const add=(c,t)=>{$("log").append(el("div",t,"m "+c));$("log").scrollTop=1e9};
 $("mode").onchange=()=>{const m=$("mode").value;hist=[];$("log").replaceChildren();add("a",HINT[m]);$("scn").classList.toggle("hide",m!="roleplay");$("start").classList.toggle("hide",m=="chat")};
 async function send(t,show){if(show)add("u",t);hist.push({role:"user",content:t});hist=hist.slice(-40);
- const r=await post("/chat",{messages:hist,mode:$("mode").value,scenario:$("scn").value,level:$("lv0").value});
+ const r=await post("/chat",{messages:hist,mode:$("mode").value,scenario:$("scn").value,level:$("lv0").value,focus:focus()});
  if(r.error){add("e",r.error);hist.pop()}else{add("a",r.reply);hist.push({role:"assistant",content:r.reply});if(show)bump("chat")}refreshUsageSoon()}
 $("start").onclick=()=>{hist=[];$("log").replaceChildren();send("Please start.",false)};
 $("f").onsubmit=e=>{e.preventDefault();const t=$("t").value.trim();if(t){$("t").value="";send(t,true)}};
@@ -521,7 +540,7 @@ async function openGrammar(topic,L){L=L||curLevel();const k=mkKey("grammar",L,to
  if(!r){r=await ai("grammar",{level:L,topic},$("sst"));if(bad($("sst"),r,"exercises")||S.k!=k)return;const c=jget("lessons","{}");c[k]=r;localStorage.lessons=JSON.stringify(c)}
  if(S.k!=k)return;
  if(!seen("glesson",topic))jot("glesson",{title:topic});
- secs($("gx"),[["What is it?",r.what],["How to use it",r.use],["Structure",r.structure],["Helpful hints",r.hints],["Examples",r.examples],["Watch out!",r.watch],["At work",r.business]]);
+ secs($("gx"),[["What is it?",r.what],["How to use it",r.use],["Structure",r.structure],["Helpful hints",r.hints],["Examples",r.examples],["Watch out!",r.watch],["In real life",r.business]]);
  $("gx").classList.remove("hide");const ss=S.sess=sess()[k]||{};showEx(ss.exercises||r.exercises,ss.answers,ss.checked)}
 // vocabulary: a lesson = list of words in groups -> "I understand" -> flashcards (write each word) -> exercises
 const perGroup=()=>+localStorage.vper||6;
@@ -747,12 +766,15 @@ function drawPron(){pmOpen();const box=$("pm"),m=el("div","","row"),w=el("button
 let rdg=null;const defCache=new Map();
 const saveRead=()=>rdg&&saveSess("reading",{r:rdg,answers:getAns($("rex")),acc:[...($("rex")._acc||[])],sc:$("rsc").textContent,wf:$("rfb").textContent});
 function regradeRead(){if(!rdg)return;const k=mkKey("reading",rdg.L,"Reading text"),{ok,tot,wrong,right}=checkEx($("rex"));resolveMissed(k,right.map(w=>w.q));addMissed(k,wrong);$("rsc").textContent=`Score: ${ok}/${tot}`;saveRead()}
-function drawRTopics(){const sel=$("rtp"),keep=sel.value;sel.replaceChildren(new Option("Any business topic",""),...(VT[$("lv5").value]||[]).map(t=>new Option(t,t)));
+function drawRTopics(){const sel=$("rtp"),keep=sel.value;sel.replaceChildren(new Option("Any topic (from my focus)",""),...(VT[$("lv5").value]||[]).map(t=>new Option(t,t)));
  sel.value=[...sel.options].some(o=>o.value==keep)?keep:""}
 function showRead(r,answers,acc,sc,wf){rdg=r;$("rt").textContent=r.title||"Reading";const box=$("rtx");box.replaceChildren();
+ const known=new Set(Object.keys(cards()).map(wkey)),found=new Set(); // shortcut: one-word matches only (+ plural -s); phrasal verbs are not highlighted
+ const isKnown=w=>{const k=wkey(w);return known.has(k)?k:known.has(k.replace(/s$/,""))?k.replace(/s$/,""):""};
  r.text.split(/\n{2,}/).forEach(p=>{const d=el("p");p.split(/(\s+)/).forEach(tok=>{if(!tok||/^\s+$/.test(tok)){d.append(tok);return}
   const m=tok.match(/^([^\p{L}\p{N}']*)([\p{L}\p{N}'’-]+)(.*)$/su);if(!m){d.append(tok);return}
-  const w=el("span",m[2],"rw");w.onclick=()=>lookup(m[2],p);d.append(m[1],w,m[3])});box.append(d)});
+  const kk=isKnown(m[2]),w=el("span",m[2],"rw"+(kk?" kn":""));if(kk){found.add(kk);w.title="One of your words ✨"}w.onclick=()=>lookup(m[2],p);d.append(m[1],w,m[3])});box.append(d)});
+ $("rkn").textContent=found.size?`✨ ${found.size} of your words are in this text (green).`:"";
  mkEx($("rex"),r.exercises);const c=$("rex");c._acc=new Map(acc||[]);c._fix=regradeRead;c._lv=()=>r.L;setAns(c,answers);
  $("rc").classList.remove("hide");$("rdef").classList.add("hide");$("rsc").textContent=sc||"";$("rfb").textContent=wf||"";if(sc)checkEx(c)}
 async function lookup(word,para,fresh){const box=$("rdef"),key=word.toLowerCase();box.classList.remove("hide");box.replaceChildren(el("small",`Looking up "${word}"...`));
@@ -802,7 +824,7 @@ $("mc").addEventListener("input",deb(saveMock));$("mc").addEventListener("change
 $("tmode").onchange=()=>{$("tprog").classList.toggle("hide",$("tmode").value!="prog");$("tmock").classList.toggle("hide",$("tmode").value!="mock")};
 
 // ===== Phrase bank (Chat tab): suggested phrases you can save, copy and use =====
-const PH_SIT=["Opening an email","Closing an email","Asking for information","Making a polite request","Apologising and fixing a problem","Asking for more time","Making a suggestion in a meeting","Agreeing and disagreeing politely","Starting and ending a meeting","Phone calls: starting and ending","Negotiating price and terms","Following up"];
+const PH_SIT=["Introducing yourself","Making small talk","Asking for directions","At a café or restaurant","Shopping and returning things","At the doctor's","Asking a teacher for help","Working in a group project","Opening and closing an email","Making a polite request","Apologising and fixing a problem","Agreeing and disagreeing politely","Phone calls","At work: meetings","At work: negotiating"];
 const phrases=()=>jget("phrases","[]"),savePh=a=>{localStorage.phrases=JSON.stringify(a.slice(-300))};
 async function copyText(t){try{await navigator.clipboard.writeText(t)}catch(e){const ta=el("textarea");ta.value=t;document.body.append(ta);ta.select();document.execCommand("copy");ta.remove()}}
 function addPhrase(t,c,u){t=String(t).trim().slice(0,200);if(t.length<3)return false;const a=phrases();if(a.some(p=>norm(p.t)==norm(t)))return false;a.push({t,c:c||"My own",u:u||"",d:dayStr()});savePh(a);drawPhrases();return true}
@@ -821,8 +843,74 @@ $("phg").onclick=async()=>{const sit=$("phs").value,r=await ai("phrases",{level:
 $("pha").onclick=()=>{if(addPhrase($("phn").value,"My own"))$("phn").value=""};
 $("phn").onkeydown=e=>e.key=="Enter"&&$("pha").click();
 
+// ===== My focus (Me tab): sent with every AI request =====
+$("pfoc").onchange=()=>{const f=[...$("pfoc").querySelectorAll("input:checked")].map(i=>i.value);saveProfile({focus:f.length?f:["general"]});
+ if(!f.length)$("pfoc").querySelector("[value=general]").checked=true};
+
+// ===== Tone dial =====
+$("tnb").onclick=async()=>{const t=$("tni").value.trim();if(!t){$("tnst").textContent="Write a sentence first.";return}
+ const r=await ai("tone",{level:curLevel(),text:t},$("tnst"));if(!r)return; // the server already checked all three tones
+ $("tno").replaceChildren(...[["😊 Casual","casual"],["🙂 Neutral","neutral"],["🎩 Formal","formal"]].map(([n,k])=>{const d=el("div","","row"),x=el("div","","grow");x.append(el("small",n),el("div",r[k]));d.append(x,spk(r[k]),copyBtn(r[k]));return d}),
+  ...(r.tip?[el("small","💡 "+r.tip)]:[]));bump("tone")};
+$("tni").onkeydown=e=>e.key=="Enter"&&$("tnb").click();
+
+// ===== Back-translation: the Vietnamese meaning of an example sentence -> write it in English. Translations are saved on the card, so each is asked only once =====
+let bt={list:[],i:0,ok:0};
+$("pbt").onclick=async()=>{const pool=shuffle(Object.values(cards()).filter(c=>c.example&&c.example.split(" ").length>=3)).slice(0,8);
+ if(!pool.length){$("pst2").textContent="Learn some words first. Back-translation uses their example sentences.";return}
+ const need=pool.filter(c=>!c.exvi);
+ if(need.length){const r=await ai("translate",{level:curLevel(),items:need.map(c=>c.example)},$("pst2"));if(bad($("pst2"),r,"vi"))return;
+  const c=cards();need.forEach((x,i)=>{x.exvi=r.vi[i];if(c[x.word])c[x.word].exvi=r.vi[i]});localStorage.cards=JSON.stringify(c)}
+ $("pst2").textContent="";bt={list:pool,i:0,ok:0};drawBack()};
+function drawBack(){pmOpen();const box=$("pm");
+ if(bt.i>=bt.list.length){box.append(el("div",`Done! ${bt.ok}/${bt.list.length} sentences matched exactly.`,"big"));return}
+ const c=bt.list[bt.i],inp=el("textarea"),res=el("div","","fb"),chk=el("button","Check"),nx=el("button","Next ▶","sec"),r=el("div","","row");let counted=false;
+ inp.style.minHeight="60px";inp.placeholder="Write this sentence in English";nx.classList.add("hide");
+ chk.onclick=()=>{const{box:b,d}=diffEl(c.example,inp.value),perfect=d.got==d.total&&d.extra==0,o=el("div","","row");o.append(el("span","Original: "+c.example),spk(c.example));
+  res.replaceChildren(b,o,el("small",perfect?"✓ Perfect!":`${d.got}/${d.total} words match. Your sentence can still be correct in a different way.`));
+  if(!counted){counted=true;if(perfect)bt.ok++;bump("backtr")}nx.classList.remove("hide")};
+ nx.onclick=()=>{bt.i++;drawBack()};r.append(chk,nx);
+ box.append(el("small",`Back-translation ${bt.i+1}/${bt.list.length} · Hint: use "${c.word}"`),el("div",c.exvi||"","big"),inp,r,res);inp.focus()}
+
+// ===== My English habits: the AI groups your recent mistakes and makes drills =====
+const habits=()=>jget("habits","null");
+function drawHabits(){const h=habits();if(!h)return;
+ $("hbst").textContent=`Last checked: ${h.d}`+(h.d<=dayStr(-7)?" · Time for a new check!":"");
+ $("hbo").replaceChildren(...h.habits.map((x,i)=>{const d=el("div","","ex");d.append(el("b",`${i+1}. ${x.name} (${x.count}×)`),el("div",x.example),el("small","💡 "+x.tip));return d}));
+ const c=$("hbx");mkEx(c,h.exercises);setAns(c,h.answers);if(h.score)checkEx(c);$("hbr").classList.remove("hide");$("hbsc").textContent=h.score||""}
+$("hbb").onclick=async()=>{const M=jget("missed","[]").slice(-40);
+ if(M.length<5){$("hbst").textContent=`I need at least 5 mistakes to find your habits (you have ${M.length}). Do some exercises first.`;return}
+ const r=await ai("habits",{level:curLevel(),items:M.map(m=>`${m.q} -> ${m.yours||"(blank)"} -> ${m.answer}`).join("\n")},$("hbst"));if(bad($("hbst"),r,"habits"))return;
+ localStorage.habits=JSON.stringify({...r,d:dayStr()});drawHabits()};
+$("hbk").onclick=()=>{const h=habits();if(!h)return;const{ok,tot}=checkEx($("hbx"));h.score=`Score: ${ok}/${tot}`;h.answers=getAns($("hbx"));localStorage.habits=JSON.stringify(h);$("hbsc").textContent=h.score;bump("quick")};
+$("hbx").addEventListener("change",deb(()=>{const h=habits();if(h){h.answers=getAns($("hbx"));localStorage.habits=JSON.stringify(h)}}));
+
+// ===== My English story: the AI keeps a short summary, so each reply sends only the summary + the last message (cheap) =====
+const WORLDS=["Everyday life in my city","First year at a university abroad","A trip around the UK","My first job at a company","Sharing a flat with friends","Making friends online","My own idea..."];
+WORLDS.forEach(w=>$("stw").add(new Option(w)));
+const story=()=>jget("story","null"),saveStory=s=>{localStorage.story=JSON.stringify(s)};
+$("stw").onchange=()=>$("stc").classList.toggle("hide",$("stw").value!=WORLDS.at(-1));
+function drawStory(){const s=story();$("stb").classList.toggle("hide",!s);$("sthd").classList.toggle("hide",!(s&&s.log.length));if(!s)return;
+ $("stsum").textContent=`${s.world} · ${s.L}`+(s.summary?` · So far: ${s.summary}`:"");
+ $("stfrom").textContent=`${s.last.kind=="email"?"📧":s.last.kind=="conversation"?"🗣️":"💬"} ${s.last.from}`;$("sttext").textContent=s.last.text;
+ $("stfb").textContent=s.fb||"";if(document.activeElement!=$("strep"))$("strep").value=s.draft||"";
+ $("sth").replaceChildren(...s.log.slice().reverse().map(e=>{const d=el("div","","ex");d.append(el("small",e.from),el("div",e.text),el("div","You: "+e.reply));return d}))}
+$("stn").onclick=async()=>{const custom=$("stw").value==WORLDS.at(-1),world=custom?$("stc").value.trim().slice(0,150):$("stw").value;
+ if(!world){$("stst").textContent="Describe your world first.";return}
+ if(story()&&!confirm("Start a new story? The current one will end."))return;
+ const L=$("lv7").value,r=await ai("story",{level:L,world},$("stst"));if(bad($("stst"),r,"mistakes"))return;
+ saveStory({world,L,summary:r.summary,last:{from:r.from,kind:r.kind,text:r.text},log:[],fb:"",draft:""});drawStory()};
+$("sts").onclick=async()=>{const s=story(),reply=$("strep").value.trim();if(!s||!reply)return;$("sts").disabled=true;
+ const r=await ai("story",{level:s.L,world:s.world,summary:s.summary,last:s.last.text,reply},$("stst2"));$("sts").disabled=false;if(bad($("stst2"),r,"mistakes"))return;
+ addMissed(mkKey("story",s.L,"Story"),r.mistakes.map(m=>({q:"Story: "+m.wrong,yours:m.wrong,answer:m.right})));
+ s.log=[...s.log,{from:s.last.from,text:s.last.text,reply}].slice(-20);s.last={from:r.from,kind:r.kind,text:r.text};s.summary=r.summary||s.summary;
+ s.fb=(r.mistakes.length?"Corrections:\n"+r.mistakes.map(m=>`✗ ${m.wrong} → ✓ ${m.right}${m.why?" ("+m.why+")":""}`).join("\n"):"✓ No mistakes. Well done!")+(r.praise?"\n🌸 "+r.praise:"");
+ s.draft="";saveStory(s);$("strep").value="";bump("story");jot("story",{title:s.world,s:`${r.mistakes.length} mistake${r.mistakes.length==1?"":"s"}`});drawStory()};
+$("strep").addEventListener("input",deb(()=>{const s=story();if(s){s.draft=$("strep").value;saveStory(s)}}));
+$("stsay").onclick=()=>{const s=story();if(s)say(s.last.text)};
+
 // start
-drawPl();drawPath();drawVTopics();restoreExam();restoreRead();restoreMock();drawRTopics();drawPhrases();refreshUsage();setInterval(refreshUsage,120000);setInterval(mockTick,1000);setInterval(remindCheck,30000);$("vsz").value=perGroup();$("vsz").onchange=()=>{localStorage.vper=$("vsz").value;if(S.k&&S.kind=="vocab")vocabBtns()};setInterval(tick,1000);tick();ensurePlan();
+drawPl();drawPath();drawVTopics();restoreExam();restoreRead();restoreMock();drawStory();drawHabits();drawRTopics();drawPhrases();refreshUsage();setInterval(refreshUsage,120000);setInterval(mockTick,1000);setInterval(remindCheck,30000);$("vsz").value=perGroup();$("vsz").onchange=()=>{localStorage.vper=$("vsz").value;if(S.k&&S.kind=="vocab")vocabBtns()};setInterval(tick,1000);tick();ensurePlan();
 synced=Object.keys(SP).length&&!LOCAL_NEWER?JSON.stringify(snap()):""; // nothing on the server yet: the first sync uploads this browser's progress
 setInterval(syncUp,3000);addEventListener("pagehide",()=>{persist();saveExam();saveRead();saveMock();const d=snap();if(Object.keys(d).length&&JSON.stringify(d)!=synced){localStorage._t=Date.now();navigator.sendBeacon("/progress",JSON.stringify({data:{...d,_t:localStorage._t}}))}});
 </script>
