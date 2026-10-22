@@ -6,6 +6,7 @@ body{font:16px system-ui;margin:0;background:#fdf6f9;display:flex;height:100vh}
 main{flex:1;display:flex;flex-direction:column;max-width:760px;margin:auto;height:100%;min-width:0}
 header{padding:12px 16px 4px;display:flex;justify-content:space-between;align-items:center;font-weight:600}
 nav{padding:0 16px 8px;display:flex;gap:6px;flex-wrap:wrap}
+#grp{padding:0 16px 6px}#grp button{font-size:15px;padding:8px 16px}#nav button{font-size:13px;padding:4px 10px}#nav button:not(.sh){display:none}
 nav button{background:#fff;color:#444;border:1px solid #d9c7d0}nav button.on{background:#e0679a;color:#fff}
 .tab{display:none;flex:1;overflow:auto;padding:0 16px 16px;flex-direction:column}.tab.on{display:flex}
 #log{flex:1;overflow:auto}
@@ -42,7 +43,8 @@ small,a{color:#777}
 .sticky{position:sticky;bottom:0;background:#fdf6f9;padding:10px 0;margin:0;border-top:1px solid #eadde3;z-index:2}
 </style>
 <main><header>English Learner 🌸 <button type=button id=g>Settings</button></header>
-<nav id=nav><button data-t=today class=on>Today</button><button data-t=review>Review</button><button data-t=place>My Course</button><button data-t=chat>Chat</button><button data-t=cards>Vocabulary</button><button data-t=grammar>Grammar</button><button data-t=read>Reading</button><button data-t=prac>Practice</button><button data-t=test>Test</button><button data-t=shadow>Shadowing</button><button data-t=music>YouTube</button><button data-t=acct>Account</button></nav>
+<nav id=grp><button data-g=home class=on>🏠 Today</button><button data-g=learn>📘 Learn</button><button data-g=pract>💪 Practice</button><button data-g=me>👤 Me</button></nav>
+<nav id=nav><button data-t=today data-g=home class="on sh">Today's missions</button><button data-t=review data-g=home class=sh>Look back at a day</button><button data-t=cards data-g=learn>Vocabulary</button><button data-t=grammar data-g=learn>Grammar</button><button data-t=read data-g=learn>Reading</button><button data-t=prac data-g=pract>Quick practice</button><button data-t=chat data-g=pract>Chat</button><button data-t=shadow data-g=pract>Shadowing</button><button data-t=test data-g=pract>Test</button><button data-t=acct data-g=me>Progress & backup</button><button data-t=place data-g=me>My Course</button><button data-t=music data-g=music>🎵 YouTube & music</button></nav>
 
 <section class="tab on" id=today>
 <div id=clock></div><div id=greet></div><small id=yday></small><div id=gbar></div><div id=tl></div></section>
@@ -167,7 +169,7 @@ small,a{color:#777}
 
 <div id=bar><span>🎵</span><span id=mt>Music off</span>
 <button id=pv class=sec title="Previous track">⏮</button><button id=bb class=sec title="Back 10 seconds">⏪</button><button id=pp class=sec>▶</button><button id=ff class=sec title="Forward 10 seconds">⏩</button><button id=pn class=sec title="Next track">⏭</button>
-<input type=range id=vol min=0 max=100 value=60 title=Volume><button id=mvid class=sec title="Show/hide video">🎬</button></div>
+<input type=range id=vol min=0 max=100 value=60 title=Volume><button id=mvid class=sec title="Show/hide video">🎬</button><button id=mopen class=sec title="Search music and playlist">🎵 List</button></div>
 </main>
 <div id=mpw><div id=mp></div></div>
 
@@ -245,14 +247,20 @@ const go=t=>{document.querySelectorAll("nav button,.tab").forEach(x=>x.classList
  document.querySelector(`[data-t=${t}]`).classList.add("on");$(t).classList.add("on");
  if(t=="test")drawTestInfo();
  if(t=="review"){if(!$("rd").value)$("rd").value=dayStr();drawReview()}
+ const g=document.querySelector(`[data-t=${t}]`).dataset.g;LASTSUB[g]=t;
+ document.querySelectorAll("#grp button").forEach(b=>b.classList.toggle("on",b.dataset.g==g));
+ document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("sh",b.dataset.g==g));
  if(t=="prac")drawWeak();if(t=="read")drawRTopics();if(t=="acct")drawAccount();if(t=="place")drawCourse();if(t=="grammar")drawPath();if(t=="cards"){drawVTopics();stats()}if(t=="today")today();if(OPEN[t])reopen(t);markTest()};
 $("nav").onclick=e=>e.target.dataset.t&&go(e.target.dataset.t);
+const LASTSUB={}; // each group reopens the page you last used in it
+$("grp").onclick=e=>{const g=e.target.dataset.g;if(g)go(LASTSUB[g]||document.querySelector(`#nav [data-g=${g}]`).dataset.t)};
+$("mopen").onclick=()=>go("music");
 
 // the test reminder: something new was learned since the last test
 function testDue(){const m=jget("testmark","null")||{d:"",w:0,g:0},nw=Object.keys(cards()).length-m.w,ng=Object.keys(gdone()).length-m.g,
  days=m.d?Math.round((new Date(dayStr())-new Date(m.d))/864e5):99;
  return{nw,ng,due:(nw>0||ng>0)&&(nw>=8||ng>=1||days>=3)}}
-const markTest=()=>document.querySelector("[data-t=test]").classList.toggle("due",testDue().due);
+const markTest=()=>{const d=testDue().due;document.querySelector("[data-t=test]").classList.toggle("due",d);document.querySelector("[data-g=pract]").classList.toggle("due",d)};
 
 // today: missions. Vocabulary and grammar topics are the next ones on their paths; practice ideas come from your plan
 const DEF="Role-play a work situation or write a business email";
@@ -277,7 +285,7 @@ function today(){shown=dayStr();const si=streakInfo(),L=si.L,t=L[shown]||{},y=L[
  if(pr.ron&&pr.rtime&&n<g&&new Date().toTimeString().slice(0,5)>=pr.rtime)box.push(el("div",`⏰ Reminder: you are at ${n}/${g} activities today. A short lesson will keep your streak!`,"card alert"));
  if(usage&&usage.pct>=80)box.push(el("div",usage.pct>=100?"💸 Your estimated AI budget for this month is used up. The real limit is the one in your provider's console, so please check it there.":`💸 You have used ${usage.pct}% of your monthly AI budget (estimate).`,"card alert"));
  if(!C){const d=el("div","","card"),b=el("button","Take the level test");b.onclick=()=>go("place");d.append("⭐ Start here: a 5-minute test so I can make your personal practice plan. ",b);box.push(d)}
- else if(C.idx>=C.units.length)box.push(el("div","🎉 You finished your practice plan! Retake the level test (My Course) for a new one.","card"));
+ else if(C.idx>=C.units.length)box.push(el("div","🎉 You finished your practice plan! Retake the level test (Me → My Course) for a new one.","card"));
  $("tl").replaceChildren(...box,...missions(P).map(m=>{const c=t[m.k]||0,d=el("div","","card"+(c>=m.goal?" done":"")),b=el("button","Go");
   b.onclick=()=>{if(!(m.run&&m.run()))go(m.tab)};d.append(`${c>=m.goal?"✓":"○"} ${m.name} (${Math.min(c,m.goal)}/${m.goal})`,el("br"),m.what+" ",b);return d}));markTest()}
 function ensurePlan(){shown=dayStr();const old=plan();if(old&&old.date==shown&&old.v==2)return today(); // set first so the clock tick does not start it twice
@@ -487,7 +495,7 @@ const sess=()=>jget("sessions","{}");
 function saveSess(k,v){const s=sess();s[k]={...v,t:Date.now()};Object.keys(s).sort((a,b)=>s[b].t-s[a].t).slice(40).forEach(x=>delete s[x]);localStorage.sessions=JSON.stringify(s)}
 const deb=(fn,ms=300)=>{let t;return()=>{clearTimeout(t);t=setTimeout(fn,ms)}};
 let S={};
-function showStudy(s){if(S.k)persist();s.back=(document.querySelector("nav button.on")||{dataset:{}}).dataset.t||"today";OPEN[s.back]={kind:s.kind,L:s.L,topic:s.topic};S=s;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));$("study").classList.add("on");$("study").scrollTop=0;
+function showStudy(s){if(S.k)persist();s.back=(document.querySelector("#nav button.on")||{dataset:{}}).dataset.t||"today";OPEN[s.back]={kind:s.kind,L:s.L,topic:s.topic};S=s;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));$("study").classList.add("on");$("study").scrollTop=0;
  $("stitle").textContent=s.title;["gx","cd","vbtn","vlist","sxw"].forEach(i=>$(i).classList.add("hide"));$("gx").replaceChildren();$("vlist").replaceChildren();
  $("sex").replaceChildren();$("sex")._list=$("sex")._get=null;$("sst").textContent=$("sst2").textContent=$("sfb").textContent=$("ssc").textContent=""}
 function persist(){if(!S.k||!S.sess)return;const s=S.sess;s.answers=getAns($("sex"));s.acc=[...($("sex")._acc||[])];s.fb=$("sfb").textContent;s.di=di;s.dscore=dscore;saveSess(S.k,s)}
