@@ -170,6 +170,22 @@ try:
     err(lambda: server.run_task("habits", {"level": "B1", "items": ""}), "mistakes first")
     server.ask = fake(json.dumps({"habits": [{"name": "made up"}], "exercises": hx})); err(lambda: server.run_task("habits", {"level": "B1", "items": "x"}), "incomplete")
 
+    # tutor memory: notes are cleaned (length, duplicates, max 10, no contact details) and reach every AI prompt; "ask" uses the lesson
+    assert server.clean_notes(["Often forgets past tense", "often forgets PAST tense", "", 5, "Email me at a@b.com", "Call 0912 345 678", "See https://x.y", "x" * 200] + [f"n{i}" for i in range(20)]) == \
+        ["Often forgets past tense", "x" * 120] + [f"n{i}" for i in range(8)]
+    assert server.clean_notes("nope") == [] and server.memory_text({}) == "" and "Likes travel" in server.memory_text({"memory": ["Likes travel"]})
+    got = {}
+    server.ask = lambda m, system=None, max_tokens=None: (got.update(m=m[-1]["content"], s=system or "") or "Because it started in the past.")
+    assert server.run_task("ask", {"level": "B1", "lesson": "Present perfect continuous", "question": "Why have been?", "memory": ["Weak at tenses"]}) == "Because it started in the past."
+    assert "Present perfect continuous" in got["m"] and "Why have been?" in got["m"] and "Weak at tenses" in got["s"]
+    err(lambda: server.run_task("ask", {"level": "B1", "lesson": "x", "question": "  "}), "question first")
+    err(lambda: server.run_task("tone", {"level": "B1", "text": "x", "memory": ["Likes cats"]}), "not valid"); assert "Likes cats" in got["s"]  # JSON tasks get the memory too
+    server.chat({"messages": [{"role": "user", "content": "hi"}], "mode": "chat", "level": "B1", "memory": ["Likes cats"]}); assert "Likes cats" in got["s"]
+    server.ask = fake(json.dumps({"notes": ["Level about B1", "Mixes up in/on", "Lives at 12 Tran Phu, phone 0987654321", "Level about B1"]}))
+    r = server.run_task("remember", {"level": "B1", "memory": ["Old note"], "evidence": "I go to school yesterday"})
+    assert r == {"notes": ["Level about B1", "Mixes up in/on"]} and "Old note" in seen[-1] and "I go to school yesterday" in seen[-1] and "NEVER save personal details" in seen[-1]
+    server.ask = fake(json.dumps({"notes": "x"})); err(lambda: server.run_task("remember", {"level": "B1"}), "incomplete")
+
     # level test and practice plan
     pit = lambda lv, sk="grammar": {"level": lv, "skill": sk, "type": "choice", "q": "q ___", "options": ["a", "b"], "answer": "a"}
     items = [pit(l) for l in ("B1", "A1", "A2", "A1")] + [pit("C2", "vocab"), pit("B2"), {**pit("A1"), "skill": "x"},

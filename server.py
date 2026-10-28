@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 DIR = os.path.dirname(os.path.abspath(__file__))
 CFG_FILE, ENV_FILE, YT_FILE = (os.path.join(DIR, f) for f in ("config.json", ".env", ".ytkey"))
 DATA = os.path.join(DIR, "data")  # one progress file per user, git-ignored
-PROGRESS = ("cards", "log", "journal", "plan", "course", "lv", "plist", "gdone", "profile", "lessons", "missed", "testmark", "sessions", "phrases", "habits", "story", "_t")  # _t: when the browser last changed something
+PROGRESS = ("cards", "log", "journal", "plan", "course", "lv", "plist", "gdone", "profile", "lessons", "missed", "testmark", "sessions", "phrases", "habits", "story", "memory", "_t")  # _t: when the browser last changed something
 HOST, PORT = os.environ.get("HOST", "127.0.0.1"), int(os.environ.get("PORT", 8000))
 AUTH = os.environ.get("APP_PASSWORD", "")  # cloud: one shared password; the login name picks the progress file
 USERS = dict(x.strip().split(":", 1) for x in os.environ.get("APP_USERS", "").split(",") if ":" in x)  # cloud, better: "daisy:pass1,minh:pass2" = one password per person
@@ -48,6 +48,20 @@ def trim(history, turns):
 def focus_text(d):
     f = [FOCUS[x] for x in (d.get("focus") if isinstance(d.get("focus"), list) else []) if isinstance(x, str) and x in FOCUS]
     return ", ".join(dict.fromkeys(f)) or FOCUS["general"]
+
+PRIVATE = re.compile(r"\S+@\S+|https?://|www\.|\d[\d .\-]{6,}\d")  # emails, links, phone/ID-like numbers
+
+def clean_notes(v):
+    """Tutor memory notes: short strings, no duplicates, at most 10. Anything that looks like contact details is dropped."""
+    out = []
+    for x in v if isinstance(v, list) else []:
+        t = re.sub(r"\s+", " ", str(x)).strip()[:120] if isinstance(x, str) else ""
+        if t and not PRIVATE.search(t) and t.lower() not in (o.lower() for o in out): out.append(t)
+    return out[:10]
+
+def memory_text(d):
+    n = clean_notes(d.get("memory"))
+    return (" What you know about this learner (use it, never mention these notes): " + "; ".join(n) + ".") if n else ""
 
 _calls = {}
 def count_call(uid):
@@ -278,7 +292,7 @@ def run_task(task, d):
     lv = d.get("level", "A1")
     if lv not in LEVELS: raise ValueError("Bad level")
     g = lambda k: str(d.get(k, ""))[:2000]  # cap input size (cost + abuse)
-    sysj = f"{JSON_SYS} The student's interests: {focus_text(d)}. Use them for examples and situations where it fits."
+    sysj = f"{JSON_SYS} The student's interests: {focus_text(d)}. Use them for examples and situations where it fits.{memory_text(d)}"
     def js(p, n, o, c): return parse_json(ask([{"role": "user", "content": p}], sysj, n), o, c)
     if task == "vocab":
         try: per = max(2, min(8, int(d.get("per") or 6)))  # words in each of the 5 groups
@@ -340,6 +354,23 @@ def run_task(task, d):
                "2 items of type error (a sentence with one mistake; the answer is the corrected sentence) and 1 more choice item on a collocation. Return JSON "
                '{"exercises":[{"type":"choice","q":"sentence with ___","options":["a","b","c"],"answer":"b"},{"type":"gap","q":"sentence with ___ (BASE)","answer":["x"]},'
                '{"type":"error","q":"a sentence with one mistake","answer":["the corrected sentence"]}]}.', 3200, "{", "}"))
+    if task == "ask":
+        q = g("question").strip()[:500]
+        if not q: raise ValueError("Write your question first.")
+        return ask([{"role": "user", "content": f"The lesson the student is studying:\n{g('lesson')[:3500]}\n\nThe student's question: {q}"}],
+                   "You are a friendly English tutor for a Vietnamese learner. Answer the question about this lesson in simple English at the student's level "
+                   f"({lv}), in at most 6 short lines, with one example if it helps. If the question is not about English, say kindly that you can only help with English."
+                   + memory_text(d), 400)
+    if task == "remember":
+        notes = clean_notes(d.get("memory"))
+        r = js("You keep a short memory about an English learner so their tutor can personalise lessons. "
+               f"Current notes: {json.dumps(notes, ensure_ascii=False)}\nNew evidence (their recent messages and mistakes):\n{g('evidence')[:3500]}\n"
+               "Update the notes: keep the useful ones, merge or fix them with the new evidence, add new ones. At most 10 notes, each under 12 words. "
+               "Only learning facts: level, common mistakes, strengths, topics and interests, how they like to learn. "
+               "NEVER save personal details (names, places, school, job, age, health, family, contact details) even if the student wrote them. "
+               'Return JSON {"notes":["..."]}.', 600, "{", "}")
+        if not isinstance(r.get("notes"), list): raise ValueError(INCOMPLETE)
+        return {"notes": clean_notes(r["notes"])}
     if task == "tone":
         if not g("text").strip(): raise ValueError("Write a sentence first.")
         return clean_tone(js(f"CEFR level {lv}. Rewrite this sentence in three tones and keep the meaning. Fix any mistakes. Sentence: {g('text')[:300]}. Return JSON "
@@ -405,7 +436,7 @@ def chat(d):
         raise ValueError("Bad request")
     sysmsg = {"chat": SYSTEM, "email": EMAIL, "roleplay": ROLE.format(who=SCEN.get(d.get("scenario")))}[mode]
     return ask([{"role": m["role"], "content": m["content"]} for m in msgs[-40:]],
-               f"{sysmsg} The student's level is {lv}. Their interests: {focus_text(d)}.", 500 if mode == "email" else None)
+               f"{sysmsg} The student's level is {lv}. Their interests: {focus_text(d)}.{memory_text(d)}", 500 if mode == "email" else None)
 
 def search(q):
     """YouTube Data API v3 (needs the student's own free API key). Embeddable videos only."""

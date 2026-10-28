@@ -68,6 +68,10 @@ input[type=checkbox]{width:auto}.rw.kn{background:#e0f4e8;border-bottom:2px soli
 <div id=as></div>
 <b>Activity</b> <small>last 20 weeks · click a day to see its review</small><div class=hm id=ah></div>
 <div id=aw></div>
+<b>🧠 What my tutor remembers</b><small>Short notes about how you learn. They are sent with your AI requests so the tutor knows you. Only learning facts: edit or delete anything.</small>
+<div class=row><label><input type=checkbox id=mon> Let the tutor remember</label><button id=mup class=sec>Update now</button><small id=memst></small></div>
+<div id=mlist></div>
+<div class=row><input id=madd class=grow maxlength=120 placeholder="Add your own note, e.g. I want to practise speaking" autocomplete=off><button id=mab class=sec>Add</button></div>
 <b>My focus</b><small>What you want English for. The AI uses it for texts, chats, phrases and examples.</small>
 <div class=row id=pfoc><label><input type=checkbox value=general> Everyday life</label><label><input type=checkbox value=work> Work</label><label><input type=checkbox value=study> Study & exams</label><label><input type=checkbox value=travel> Travel</label></div>
 <b>Daily goal and reminder</b>
@@ -112,6 +116,8 @@ input[type=checkbox]{width:auto}.rw.kn{background:#e0f4e8;border-bottom:2px soli
 <div class="row hide" id=vbtn><button id=vnew>Learn 8 new words</button><button id=vprac class=sec>Practice these words</button></div>
 <div id=vlist class=hide></div>
 <div class="card hide" id=cd><small id=clabel></small><div id=cf></div><div class=row id=cn></div></div>
+<div class="card hide" id=ask><b>💬 Ask the tutor about this lesson</b>
+<div class=row><input id=askq class=grow maxlength=500 placeholder="e.g. Why is it 'have been' here, not 'was'?" autocomplete=off><button id=askb>Ask</button></div><small id=askst></small><div id=askl></div></div>
 <div class=hide id=sxw><b>Exercises</b><div id=sex></div>
 <div class="row sticky"><button id=sck>Check answers</button><button id=snew class=sec>New exercises</button><b id=ssc></b><small id=sst2></small></div><div class=fb id=sfb></div>
 <div class=row><b id=smh></b><button id=smc class=sec>Clear</button></div><div id=smiss></div></div></section>
@@ -222,7 +228,8 @@ const setLevel=l=>{document.querySelectorAll(".lv").forEach(o=>o.value=l);localS
 document.querySelectorAll(".lv").forEach(s=>{LV.forEach(l=>s.add(new Option(l)));s.value=curLevel();s.onchange=()=>setLevel(s.value)});
 // call the AI; shows errors/progress in `out`, returns the result or undefined
 const focus=()=>{const f=profile().focus;return Array.isArray(f)&&f.length?f:["general"]};
-const ai=async(task,d,out)=>{out.textContent="Thinking...";const r=await post("/ai",{task,focus:focus(),...d});out.textContent=r.error||"";refreshUsageSoon();return r.result};
+const memOn=()=>profile().mem!==false,memNotes=()=>memOn()?jget("memory","[]").map(m=>m.t):[];
+const ai=async(task,d,out)=>{out.textContent="Thinking...";const r=await post("/ai",{task,focus:focus(),memory:memNotes(),...d});out.textContent=r.error||"";refreshUsageSoon();return r.result};
 const bad=(out,r,...keys)=>{const x=!r||keys.some(k=>!Array.isArray(r[k]));if(x&&r)out.textContent="The AI reply was incomplete. Please try again.";return x};
 
 // progress, all in localStorage (and copied to the server): saved words, a per-day activity log, a journal, mistakes
@@ -332,7 +339,7 @@ function drawReview(){const d=$("rd").value||dayStr(),J=jget("journal","{}")[d]|
 $("rd").onchange=drawReview;
 
 // account: stats, activity map, word progress, topic paths. Progress is also saved on the server (this is the cloud copy)
-const SYNC=["cards","log","journal","plan","course","lv","plist","gdone","profile","lessons","missed","testmark","sessions","phrases","habits","story"];
+const SYNC=["cards","log","journal","plan","course","lv","plist","gdone","profile","lessons","missed","testmark","sessions","phrases","habits","story","memory"];
 let synced="",syncMsg="";
 const snap=()=>{const d={};SYNC.forEach(k=>{if(localStorage[k]!=null)d[k]=localStorage[k]});return d};
 async function syncUp(){const d=snap(),j=JSON.stringify(d);if(!Object.keys(d).length||j==synced)return;localStorage._t=Date.now(); // nothing to save (e.g. browser data was cleared): do not claim to be newer
@@ -467,8 +474,8 @@ let hist=[];
 const HINT={chat:"Hi! Write me something in English and I'll fix it and explain simply.",email:"Click Start to get an email task. Then write your email here.",roleplay:"Choose a scene and click Start. I'll play the role and give you tips."};
 const add=(c,t)=>{$("log").append(el("div",t,"m "+c));$("log").scrollTop=1e9};
 $("mode").onchange=()=>{const m=$("mode").value;hist=[];$("log").replaceChildren();add("a",HINT[m]);$("scn").classList.toggle("hide",m!="roleplay");$("start").classList.toggle("hide",m=="chat")};
-async function send(t,show){if(show)add("u",t);hist.push({role:"user",content:t});hist=hist.slice(-40);
- const r=await post("/chat",{messages:hist,mode:$("mode").value,scenario:$("scn").value,level:$("lv0").value,focus:focus()});
+async function send(t,show){if(show){add("u",t);memEvidence(t)}hist.push({role:"user",content:t});hist=hist.slice(-40);
+ const r=await post("/chat",{messages:hist,mode:$("mode").value,scenario:$("scn").value,level:$("lv0").value,focus:focus(),memory:memNotes()});
  if(r.error){add("e",r.error);hist.pop()}else{add("a",r.reply);hist.push({role:"assistant",content:r.reply});if(show)bump("chat")}refreshUsageSoon()}
 $("start").onclick=()=>{hist=[];$("log").replaceChildren();send("Please start.",false)};
 $("f").onsubmit=e=>{e.preventDefault();const t=$("t").value.trim();if(t){$("t").value="";send(t,true)}};
@@ -515,13 +522,13 @@ function saveSess(k,v){const s=sess();s[k]={...v,t:Date.now()};Object.keys(s).so
 const deb=(fn,ms=300)=>{let t;return()=>{clearTimeout(t);t=setTimeout(fn,ms)}};
 let S={};
 function showStudy(s){if(S.k)persist();s.back=(document.querySelector("#nav button.on")||{dataset:{}}).dataset.t||"today";OPEN[s.back]={kind:s.kind,L:s.L,topic:s.topic};S=s;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));$("study").classList.add("on");$("study").scrollTop=0;
- $("stitle").textContent=s.title;["gx","cd","vbtn","vlist","sxw"].forEach(i=>$(i).classList.add("hide"));$("gx").replaceChildren();$("vlist").replaceChildren();
+ $("stitle").textContent=s.title;["gx","cd","vbtn","vlist","sxw"].forEach(i=>$(i).classList.add("hide"));$("ask").classList.toggle("hide",s.kind=="review");$("askl").replaceChildren();$("askq").value=$("askst").textContent="";$("gx").replaceChildren();$("vlist").replaceChildren();
  $("sex").replaceChildren();$("sex")._list=$("sex")._get=null;$("sst").textContent=$("sst2").textContent=$("sfb").textContent=$("ssc").textContent=""}
 function persist(){if(!S.k||!S.sess)return;const s=S.sess;s.answers=getAns($("sex"));s.acc=[...($("sex")._acc||[])];s.fb=$("sfb").textContent;s.di=di;s.dscore=dscore;saveSess(S.k,s)}
 $("sback").onclick=()=>{persist();const b=S.back||"today";delete OPEN[b];go(b)};
 function reopen(t){const o=OPEN[t];if(o.kind=="grammar")openGrammar(o.topic,o.L);else if(o.kind=="vocab")openVocab(o.topic,o.L);else delete OPEN[t]} // a card review is not reopened: each card is already saved
 $("sex").addEventListener("input",deb(persist));$("sex").addEventListener("change",deb(persist));
-function drawMissed(){const M=S.k?missedFor(S.k).reverse():[];$("smh").textContent=`What I missed (${M.length})`;$("smc").classList.toggle("hide",!M.length);
+function drawMissed(){drawAsks();const M=S.k?missedFor(S.k).reverse():[];$("smh").textContent=`What I missed (${M.length})`;$("smc").classList.toggle("hide",!M.length);
  $("smiss").replaceChildren(...M.map(m=>{const d=el("div","","ex");d.append(el("small",m.d+" · "+m.q),el("br"),`Your answer: ${m.yours||"(blank)"}  →  correct: ${m.answer}`);return d}))}
 $("smc").onclick=()=>{localStorage.missed=JSON.stringify(jget("missed","[]").filter(m=>m.k!=S.k));drawMissed()};
 function tickGrammar(){const{L,topic}=S,[ok,tot]=$("sex")._score||[0,0],p=L+"|"+topic;
@@ -559,7 +566,7 @@ function resumeVocab(ss){drawMissed();
  if(ss.step=="list")return showList();
  if(ss.step=="flash")return deck(ss.words,"lesson",ss.di,ss.dscore);
  vocabBtns();showEx(ss.exercises||[],ss.answers,ss.checked)}
-function showList(){const ws=S.sess.words,g={};ws.forEach(w=>{const t=GK.some(k=>k[0]==w.type)?w.type:"topic word";(g[t]=g[t]||[]).push(w)});
+function showList(){drawAsks();const ws=S.sess.words,g={};ws.forEach(w=>{const t=GK.some(k=>k[0]==w.type)?w.type:"topic word";(g[t]=g[t]||[]).push(w)});
  const box=$("vlist");box.replaceChildren(el("b",`In this lesson you will learn ${ws.length} words in ${Object.keys(g).length} groups.`));
  GK.filter(([t])=>g[t]).forEach(([t,title])=>{const list=g[t];box.append(el("div",`${title} (${list.length})`,"h2"));
   list.forEach(w=>{const c=el("div","","card"),r1=el("div","","row"),r2=el("div","","row");r1.append(el("b",w.word),el("span",[w.ipa,w.pos].filter(Boolean).join(" · ")),spk(w.word));
@@ -901,7 +908,7 @@ $("stn").onclick=async()=>{const custom=$("stw").value==WORLDS.at(-1),world=cust
  const L=$("lv7").value,r=await ai("story",{level:L,world},$("stst"));if(bad($("stst"),r,"mistakes"))return;
  saveStory({world,L,summary:r.summary,last:{from:r.from,kind:r.kind,text:r.text},log:[],fb:"",draft:""});drawStory()};
 $("sts").onclick=async()=>{const s=story(),reply=$("strep").value.trim();if(!s||!reply)return;$("sts").disabled=true;
- const r=await ai("story",{level:s.L,world:s.world,summary:s.summary,last:s.last.text,reply},$("stst2"));$("sts").disabled=false;if(bad($("stst2"),r,"mistakes"))return;
+ memEvidence(reply);const r=await ai("story",{level:s.L,world:s.world,summary:s.summary,last:s.last.text,reply},$("stst2"));$("sts").disabled=false;if(bad($("stst2"),r,"mistakes"))return;
  addMissed(mkKey("story",s.L,"Story"),r.mistakes.map(m=>({q:"Story: "+m.wrong,yours:m.wrong,answer:m.right})));
  s.log=[...s.log,{from:s.last.from,text:s.last.text,reply}].slice(-20);s.last={from:r.from,kind:r.kind,text:r.text};s.summary=r.summary||s.summary;
  s.fb=(r.mistakes.length?"Corrections:\n"+r.mistakes.map(m=>`✗ ${m.wrong} → ✓ ${m.right}${m.why?" ("+m.why+")":""}`).join("\n"):"✓ No mistakes. Well done!")+(r.praise?"\n🌸 "+r.praise:"");
@@ -909,8 +916,38 @@ $("sts").onclick=async()=>{const s=story(),reply=$("strep").value.trim();if(!s||
 $("strep").addEventListener("input",deb(()=>{const s=story();if(s){s.draft=$("strep").value;saveStory(s)}}));
 $("stsay").onclick=()=>{const s=story();if(s)say(s.last.text)};
 
+// ===== Ask the tutor about this lesson: the page text (lesson, words, exercises) goes with the question =====
+function drawAsks(){const A=(S.sess&&S.sess.asks)||[];$("askl").replaceChildren(...A.slice().reverse().map(a=>{const d=el("div","","ex");d.append(el("b","You: "+a.q),el("div",a.a));return d}))}
+$("askb").onclick=async()=>{const q=$("askq").value.trim();if(!q||!S.k)return;
+ const lesson=[$("stitle").textContent,$("gx").textContent,$("vlist").textContent,...($("sex")._list||[]).map(x=>qText(x)+" (answer: "+ansText(x)+")")].join("\n").slice(0,3500);
+ $("askb").disabled=true;const r=await ai("ask",{level:S.L||curLevel(),lesson,question:q},$("askst"));$("askb").disabled=false;if(!r)return;
+ S.sess=S.sess||{step:"ex",words:[]};S.sess.asks=[...(S.sess.asks||[]),{q,a:r}].slice(-10);persist();$("askq").value="";drawAsks();memEvidence("Question: "+q)};
+$("askq").onkeydown=e=>e.key=="Enter"&&$("askb").click();
+
+// ===== Tutor memory: up to 10 notes, updated by the AI at most once a day automatically (when there is enough new evidence), or with "Update now" =====
+const mem=()=>jget("memory","[]"),saveMem=a=>{localStorage.memory=JSON.stringify(a.slice(0,10));drawMem()};
+function memEvidence(t){if(!memOn())return;const E=jget("memsrc","[]");E.push(String(t).slice(0,300));localStorage.memsrc=JSON.stringify(E.slice(-15)); // local only: not synced
+ if(E.length>=8&&localStorage.memday!=dayStr())memUpdate(true)}
+async function memUpdate(auto){if(!memOn()){if(!auto)$("memst").textContent="Turn on \"Let the tutor remember\" first.";return}const E=jget("memsrc","[]"),M=jget("missed","[]").slice(-10);
+ if(E.length+M.length<3){$("memst").textContent="Chat, write or do some exercises first, so the tutor has something to learn from.";return}
+ localStorage.memday=dayStr(); // set first: a failed or slow call does not retry all day
+ const ev=[...E.map(x=>"Wrote: "+x),...M.map(m=>`Mistake: ${m.q} -> ${m.yours||"(blank)"} (correct: ${m.answer})`)].join("\n");
+ const r=await ai("remember",{level:curLevel(),evidence:ev},auto?{textContent:""}:$("memst"));if(!r)return;
+ const old=mem(),now=dayStr(),own=old.filter(o=>o.own),low=new Set(own.map(o=>o.t.toLowerCase())); // notes you wrote or edited always stay
+ saveMem([...own,...r.notes.filter(t=>!low.has(t.toLowerCase())).map(t=>({t,d:(old.find(o=>o.t==t)||{}).d||now}))]);localStorage.memsrc="[]";
+ if(!auto)$("memst").textContent="Updated ✓"}
+function drawMem(){const A=mem();$("mon").checked=memOn();
+ $("mlist").replaceChildren(...(A.length?A.map((m,i)=>{const r=el("div","","row"),inp=el("input"),x=el("button","✕","sec");inp.className="grow";inp.maxLength=120;inp.value=m.t;inp.title=m.own?"Your note: kept when the tutor updates":"Added by the tutor";
+  inp.onchange=()=>{const a=mem(),v=inp.value.trim();if(v)a[i]={t:v,d:dayStr(),own:1};else a.splice(i,1);saveMem(a)};x.title="Delete";x.onclick=()=>{const a=mem();a.splice(i,1);saveMem(a)};
+  r.append(inp,x);return r}):[el("p",memOn()?"Nothing yet. The tutor will add notes as you chat and practise.":"Memory is off.")]))}
+$("mon").onchange=()=>{saveProfile({mem:$("mon").checked});drawMem()};
+$("mup").onclick=()=>memUpdate(false);
+$("mab").onclick=()=>{const v=$("madd").value.trim();if(!v)return;const a=mem();if(a.length>=10){$("memst").textContent="10 notes is the limit. Delete one first.";return}
+ a.push({t:v.slice(0,120),d:dayStr(),own:1});saveMem(a);$("madd").value=""};
+$("madd").onkeydown=e=>e.key=="Enter"&&$("mab").click();
+
 // start
-drawPl();drawPath();drawVTopics();restoreExam();restoreRead();restoreMock();drawStory();drawHabits();drawRTopics();drawPhrases();refreshUsage();setInterval(refreshUsage,120000);setInterval(mockTick,1000);setInterval(remindCheck,30000);$("vsz").value=perGroup();$("vsz").onchange=()=>{localStorage.vper=$("vsz").value;if(S.k&&S.kind=="vocab")vocabBtns()};setInterval(tick,1000);tick();ensurePlan();
+drawPl();drawPath();drawVTopics();restoreExam();restoreRead();restoreMock();drawStory();drawHabits();drawMem();drawRTopics();drawPhrases();refreshUsage();setInterval(refreshUsage,120000);setInterval(mockTick,1000);setInterval(remindCheck,30000);$("vsz").value=perGroup();$("vsz").onchange=()=>{localStorage.vper=$("vsz").value;if(S.k&&S.kind=="vocab")vocabBtns()};setInterval(tick,1000);tick();ensurePlan();
 synced=Object.keys(SP).length&&!LOCAL_NEWER?JSON.stringify(snap()):""; // nothing on the server yet: the first sync uploads this browser's progress
 setInterval(syncUp,3000);addEventListener("pagehide",()=>{persist();saveExam();saveRead();saveMock();const d=snap();if(Object.keys(d).length&&JSON.stringify(d)!=synced){localStorage._t=Date.now();navigator.sendBeacon("/progress",JSON.stringify({data:{...d,_t:localStorage._t}}))}});
 </script>
